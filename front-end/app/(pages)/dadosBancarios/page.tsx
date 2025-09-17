@@ -3,9 +3,11 @@
 import Button from "@/components/Forms/Button";
 import Input from "@/components/Forms/Input";
 import InputSelectComponent from "@/components/Forms/InputSelect";
+import { useAuth } from "@/contexts/AuthContext";
 import { GetForm } from "@/utils";
 import { ChevronRight, Save } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 import * as yup from "yup";
 
 const DadosBancarios = ({ ...rest }: any) => {
@@ -15,6 +17,49 @@ const DadosBancarios = ({ ...rest }: any) => {
   const [tipoConta, setTipoConta] = useState("");
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [titular, setTitular] = useState("");
+  const { token } = useAuth();
+
+  // Máscaras
+  function maskAgencia(value: string) {
+    return value.replace(/\D/g, "").slice(0, 4);
+  }
+  function maskConta(value: string) {
+    return value.replace(/\D/g, "").slice(0, 10);
+  }
+  function maskCnpj(value: string) {
+    value = value.replace(/\D/g, "").slice(0, 14);
+    // CNPJ: 00.000.000/0000-00
+    return value
+      .replace(/(\d{2})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1/$2")
+      .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+  }
+
+  // Buscar dados bancários ao abrir a tela
+  useEffect(() => {
+    async function fetchDados() {
+      if (!token) return;
+      const res = await fetch(
+        "http://localhost:5000/dados-bancarios/buscar-dados-bancarios",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data) {
+          setBanco(data.banco || "");
+          setAgencia(data.agencia || "");
+          setConta(data.conta || "");
+          setTipoConta(data.tipo_conta || "");
+          setCpfCnpj(data.cpf_cnpj || "");
+          setTitular(data.titular || "");
+        }
+      }
+    }
+    fetchDados();
+  }, [token]);
 
   const schema = yup.object().shape({
     banco: yup.string().required("Informe o banco"),
@@ -23,20 +68,64 @@ const DadosBancarios = ({ ...rest }: any) => {
     tipoConta: yup.string().required("Selecione o tipo de conta"),
     cpfCnpj: yup
       .string()
-      .matches(
-        /^\d{11}$|^\d{14}$/,
-        "Informe um CPF (11 dígitos) ou CNPJ (14 dígitos)"
-      )
-      .required("Informe o CPF ou CNPJ"),
+      .matches(/^\d{14}$/, "Informe um CNPJ válido (14 dígitos)")
+      .required("Informe o CNPJ"),
     titular: yup.string().required("Informe o nome do titular"),
   });
 
   const { handleSubmit, ...form } = GetForm(schema);
 
   const onSubmitFunction = async () => {
-    const dados = { banco, agencia, conta, tipoConta, cpfCnpj, titular };
-    console.log("Dados bancários salvos:", dados);
-    // Aqui você pode enviar para o backend via API
+    const dados = {
+      banco,
+      agencia,
+      conta,
+      tipo_conta: tipoConta,
+      cpf_cnpj: cpfCnpj.replace(/\D/g, ""),
+      titular,
+    };
+    try {
+      const res = await fetch(
+        "http://localhost:5000/dados-bancarios/cadastrar-dados-bancarios",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(dados),
+        }
+      );
+      const data = await res.json();
+      if (res.ok) {
+        Swal.fire({
+          icon: "success",
+          text: data.message || "Dados bancários salvos!",
+          timer: 2000,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          text: data.message || "Erro ao salvar dados bancários.",
+          timer: 2500,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+        });
+      }
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        text: "Erro ao conectar ao servidor.",
+        timer: 2500,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end",
+      });
+    }
   };
 
   const opcoesBanco = [
@@ -87,7 +176,7 @@ const DadosBancarios = ({ ...rest }: any) => {
               error="Informe a agência"
               formulario={form}
               value={agencia}
-              onChange={(e) => setAgencia(e.target.value)}
+              onChange={(e) => setAgencia(maskAgencia(e.target.value))}
               width="w-full"
             />
           </div>
@@ -100,7 +189,7 @@ const DadosBancarios = ({ ...rest }: any) => {
               error="Informe a conta"
               formulario={form}
               value={conta}
-              onChange={(e) => setConta(e.target.value)}
+              onChange={(e) => setConta(maskConta(e.target.value))}
               width="w-full"
             />
             <InputSelectComponent
@@ -115,13 +204,13 @@ const DadosBancarios = ({ ...rest }: any) => {
               width="w-full"
             />
             <Input
-              label="CPF/CNPJ"
+              label="CNPJ"
               name="cpfCnpj"
               required
-              error="Informe o CPF ou CNPJ"
+              error="Informe o CNPJ"
               formulario={form}
-              value={cpfCnpj}
-              onChange={(e) => setCpfCnpj(e.target.value)}
+              value={maskCnpj(cpfCnpj)}
+              onChange={(e) => setCpfCnpj(maskCnpj(e.target.value))}
               width="w-full"
             />
           </div>
