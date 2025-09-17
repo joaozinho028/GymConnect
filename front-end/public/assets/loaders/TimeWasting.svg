@@ -1,0 +1,9 @@
+<svg baseProfile="full" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="200" height="200"  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-2" viewBox="0 0 200 200">
+  <circle  cx="100" cy="100" r="90" fill="none" stroke-width="19" />
+  
+  <line x1="100" y1="100" x2="100" y2="50" stroke="#000" stroke-width="14" id="hourHand" stroke-linecap="round" />
+  <line x1="100" y1="100" x2="100" y2="30" stroke="#000" stroke-width="14" id="minuteHand"  stroke-linecap="round" />
+  <circle cx="100" cy="100" r="2" fill="#000" stroke="#000" stroke-width="3"/>
+  <animateTransform xlink:href="#hourHand" attributeName="transform" attributeType="XML" type="rotate" from="0 100 100" to="360 100 100" dur="12s" repeatCount="indefinite"/>
+  <animateTransform xlink:href="#minuteHand" attributeName="transform" attributeType="XML" type="rotate" from="0 100 100" to="360 100 100" dur="1s" repeatCount="indefinite"/>
+</svg>
