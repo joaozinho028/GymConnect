@@ -8,7 +8,6 @@ import {
   Layers,
   Search,
   Settings2,
-  Smartphone,
   UserMinus2,
   UserPlus,
   Users,
@@ -17,13 +16,11 @@ import { useState } from "react";
 
 import CadastrarPerfis from "../cadastroPerfil/page";
 import CadastrarUsuarios from "../cadastroUsuario/page";
-import ConfiguracoesApp from "../configuracoesApp/page";
 import ConsultaPerfis from "../consultaPerfis/page";
 import ConsultaUsuarios from "../consultaUsuario/page";
 import DadosBancarios from "../dadosBancarios/page";
 import HistorioUsuario from "../historicoUsuario/page";
 import ProfilePage from "../meuPerifl/page";
-import PlanoGymConnect from "../planosGymConnect/page";
 
 type MenuItem = {
   name: string;
@@ -45,16 +42,16 @@ export default function FormEditaPerfil() {
       icon: CreditCard,
       component: DadosBancarios,
     },
-    {
-      name: "Plano Gym Connect",
-      icon: Layers,
-      component: PlanoGymConnect,
-    },
-    {
-      name: "Configurações Aplicativo",
-      icon: Smartphone,
-      component: ConfiguracoesApp,
-    },
+    // {
+    //   name: "Plano Gym Connect",
+    //   icon: Layers,
+    //   component: PlanoGymConnect, // comentado temporariamente
+    // },
+    // {
+    //   name: "Configurações Aplicativo", // comentado temporariamente
+    //   icon: Smartphone,
+    //   component: ConfiguracoesApp,
+    // },
     {
       name: "Histórico de Usuários",
       icon: UserMinus2,

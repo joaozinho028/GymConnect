@@ -19,7 +19,14 @@ export default function Login() {
     e.preventDefault();
 
     if (!email || !senha) {
-      alert("Preencha todos os campos");
+      Swal.fire({
+        icon: "warning",
+        text: "Preencha todos os campos.",
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end",
+      });
       inputUserRef.current?.focus();
       return;
     }

@@ -14,17 +14,70 @@ import { Input } from "@/components/ui/input";
 import UploadImage from "@/components/UploadImage/UploadComponent";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 
 export default function ProfilePage() {
   const { token } = useAuth();
   const [userData, setUserData] = useState<any>(null);
   const [empresaData, setEmpresaData] = useState<any>(null);
   const [filialData, setFilialData] = useState<any>(null);
+  const [perfilData, setPerfilData] = useState<any>(null);
+  const [ultimaAtividade, setUltimaAtividade] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [senhaAtual, setSenhaAtual] = useState("");
+  const [senhaNova, setSenhaNova] = useState("");
+  const [senhaNovaErro, setSenhaNovaErro] = useState("");
+  // Função para validar força da senha
+  function validarSenhaForte(senha: string) {
+    const regex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).{6,}$/;
+    return regex.test(senha);
+  }
+
+  const handleChangeSenha = async () => {
+    setSenhaNovaErro("");
+    if (!senhaAtual || !senhaNova) {
+      Swal.fire({ icon: "warning", text: "Preencha todos os campos." });
+      return;
+    }
+    if (!validarSenhaForte(senhaNova)) {
+      setSenhaNovaErro(
+        "A senha deve ter no mínimo 6 caracteres, incluindo letra, número e caractere especial."
+      );
+      return;
+    }
+    try {
+      const res = await fetch("http://localhost:5000/auth/alterar-senha", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ senhaAtual, senhaNova }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        Swal.fire({
+          icon: "success",
+          text: data.message || "Senha alterada com sucesso!",
+        });
+        setIsDialogOpen(false);
+        setSenhaAtual("");
+        setSenhaNova("");
+      } else {
+        Swal.fire({
+          icon: "error",
+          text: data.message || "Erro ao alterar senha.",
+        });
+      }
+    } catch (err) {
+      Swal.fire({ icon: "error", text: "Erro ao conectar ao servidor." });
+    }
+  };
   const [isPhotoDialogOpen, setIsPhotoDialogOpen] = useState(false);
   const [newAvatar, setNewAvatar] = useState<string | File | undefined>(
     undefined
   );
+  const [avatarUrl, setAvatarUrl] = useState<string>("");
 
   useEffect(() => {
     async function fetchProfile() {
@@ -39,29 +92,68 @@ export default function ProfilePage() {
       setUserData(data.usuario);
       setEmpresaData(data.empresa);
       setFilialData(data.filial);
+      setPerfilData(data.perfil);
+      // Usar avatar_url do backend
+      setAvatarUrl(data.usuario?.avatar_url || "");
+      // Salvar data/hora da última atividade no localStorage
+      const now = new Date().toLocaleString();
+      localStorage.setItem("ultima_atividade", now);
+      setUltimaAtividade(now);
     }
+    // Buscar última atividade do localStorage ao montar
+    const last = localStorage.getItem("ultima_atividade") || "-";
+    setUltimaAtividade(last);
     fetchProfile();
   }, [token]);
 
-  const handleSave = () => {
-    setIsDialogOpen(false);
+  console.log("token aqui", token);
+
+  const handleSave = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    handleChangeSenha();
   };
 
-  const handleSavePhoto = () => {
-    if (newAvatar && userData) {
-      setUserData((prev: any) => ({
-        ...prev,
-        avatar_url:
-          typeof newAvatar === "string"
-            ? newAvatar
-            : URL.createObjectURL(newAvatar),
-      }));
-      setIsPhotoDialogOpen(false);
-      setNewAvatar(undefined);
+  const handleSavePhoto = async () => {
+    if (!newAvatar || !userData) return;
+    // Só aceita File, não string/base64
+    if (typeof newAvatar === "string") {
+      Swal.fire({ icon: "error", text: "Selecione uma imagem válida." });
+      return;
+    }
+    if (newAvatar.size > 2 * 1024 * 1024) {
+      Swal.fire({ icon: "error", text: "Imagem muito grande. Máximo 2MB." });
+      return;
+    }
+    const formData = new FormData();
+    formData.append("avatar", newAvatar);
+    try {
+      const res = await fetch("http://localhost:5000/auth/avatar", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        Swal.fire({ icon: "success", text: data.message || "Foto alterada!" });
+        setAvatarUrl(data.url || "");
+        setIsPhotoDialogOpen(false);
+        setNewAvatar(undefined);
+      } else {
+        Swal.fire({
+          icon: "error",
+          text: data.message || "Erro ao enviar imagem.",
+        });
+      }
+    } catch (err) {
+      Swal.fire({ icon: "error", text: "Erro ao conectar ao servidor." });
     }
   };
 
-  if (!userData || !empresaData || !filialData) {
+  console.log(userData);
+
+  if (!userData || !empresaData || !filialData || !perfilData) {
     return <div>Carregando...</div>;
   }
 
@@ -95,7 +187,7 @@ export default function ProfilePage() {
             <Avatar className="w-16 h-16">
               <AvatarImage
                 src={
-                  userData.avatar_url ||
+                  avatarUrl ||
                   "https://ui-avatars.com/api/?name=" + userData.nome_usuario
                 }
               />
@@ -142,11 +234,11 @@ export default function ProfilePage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Perfil</p>
-              <p className="font-medium">{userData.id_perfil}</p>
+              <p className="font-medium">{perfilData.nome_perfil}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Última Atividade</p>
-              <p className="font-medium">{userData.ultima_atividade || "-"}</p>
+              <p className="font-medium">{ultimaAtividade}</p>
             </div>
           </div>
         </CardContent>
@@ -185,37 +277,48 @@ export default function ProfilePage() {
           <DialogHeader>
             <DialogTitle>Alterar senha</DialogTitle>
           </DialogHeader>
-
-          <div className="space-y-4">
+          <form onSubmit={handleSave} className="space-y-4">
             <div>
-              <label className="text-sm font-medium" htmlFor="nome">
+              <label className="text-sm font-medium" htmlFor="senhaAtual">
                 Senha Atual
               </label>
-              <Input id="senhaAtual" type="password" />
+              <Input
+                id="senhaAtual"
+                type="password"
+                value={senhaAtual}
+                onChange={(e) => setSenhaAtual(e.target.value)}
+                autoComplete="current-password"
+              />
             </div>
             <div>
-              <label className="text-sm font-medium" htmlFor="email">
+              <label className="text-sm font-medium" htmlFor="senhaNova">
                 Nova Senha
               </label>
-              <Input id="senhaNova" type="password" />
+              <Input
+                id="senhaNova"
+                type="password"
+                value={senhaNova}
+                onChange={(e) => setSenhaNova(e.target.value)}
+                autoComplete="new-password"
+              />
+              {senhaNovaErro && (
+                <p className="text-xs text-red-600 mt-1">{senhaNovaErro}</p>
+              )}
             </div>
-          </div>
-
-          <DialogFooter className="mt-4">
-            <Button
-              className="cursor-pointer"
-              variant="outline"
-              onClick={() => setIsDialogOpen(false)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              className="cursor-pointer bg-green-600"
-              onClick={handleSave}
-            >
-              Salvar
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="mt-4">
+              <Button
+                className="cursor-pointer"
+                variant="outline"
+                type="button"
+                onClick={() => setIsDialogOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button className="cursor-pointer bg-green-600" type="submit">
+                Salvar
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

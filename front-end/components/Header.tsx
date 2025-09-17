@@ -14,7 +14,6 @@ import {
   Building2,
   ChevronDown,
   GraduationCap,
-  Key,
   LayoutDashboard,
   LogOut,
   PlusCircle,
@@ -22,7 +21,7 @@ import {
   Settings,
 } from "lucide-react";
 import Link from "next/link";
-import { FC } from "react";
+import { FC, useEffect, useState } from "react";
 
 interface UserInfo {
   name: string;
@@ -37,15 +36,26 @@ interface HeaderProps {
 }
 
 const Header: FC<HeaderProps> = () => {
-  const { logout } = useAuth();
-  const user = {
-    name: "João Silva",
-    email: "joao.silva@email.com",
-    avatarUrl:
-      "https://ui-avatars.com/api/?name=Joao+Silva&background=0D8ABC&color=fff",
-    nameEmpresa: "Jovitech Sistemas",
-    filialEmpresa: "Empresa 1 Jaraguá",
-  };
+  const { logout, token } = useAuth();
+  const [userData, setUserData] = useState<any>(null);
+  const [empresaData, setEmpresaData] = useState<any>(null);
+  const [filialData, setFilialData] = useState<any>(null);
+  useEffect(() => {
+    async function fetchProfile() {
+      if (!token) return;
+      const res = await fetch("http://localhost:5000/auth/profile", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      setUserData(data.usuario);
+      setEmpresaData(data.empresa);
+      setFilialData(data.filial);
+    }
+    fetchProfile();
+  }, [token]);
 
   return (
     <header className="fixed inset-x-0 top-0 z-40 h-14 bg-[#64FA36] shadow-md flex items-center px-6">
@@ -53,7 +63,6 @@ const Header: FC<HeaderProps> = () => {
       <span className="text-black font-semibold text-lg tracking-wide select-none">
         Gym Connect
       </span>
-
       {/* Menu horizontal */}
       <div className="ml-8 hidden md:flex items-center gap-6 text-black font-semibold  text-sm">
         <Link
@@ -143,13 +152,21 @@ const Header: FC<HeaderProps> = () => {
       <div className="ml-auto">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="ml-5 rounded-full focus:outline-none focus:ring-2 focus:ring-white/50 cursor-pointer">
-              <Avatar className="h-9 w-9 border-2 border-white/40">
-                {user?.avatarUrl && (
-                  <AvatarImage src={user.avatarUrl} alt={user.name} />
-                )}
+            <button className="ml-5 mt-1 rounded-full focus:outline-none focus:ring-2 focus:ring-white/50 cursor-pointer">
+              <Avatar className="h-12 w-12 border-2 border-white/40">
+                <AvatarImage
+                  src={
+                    userData?.avatar_url ||
+                    (userData?.nome_usuario
+                      ? `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                          userData.nome_usuario
+                        )}`
+                      : undefined)
+                  }
+                  alt={userData?.nome_usuario || "Usuário"}
+                />
                 <AvatarFallback className="bg-white text-[#151515] font-semibold uppercase">
-                  {user?.name?.[0] ?? "U"}
+                  {userData?.nome_usuario?.[0] ?? "U"}
                 </AvatarFallback>
               </Avatar>
             </button>
@@ -157,27 +174,17 @@ const Header: FC<HeaderProps> = () => {
           <DropdownMenuContent align="end" className="w-60">
             <div className="space-y-1 ml-1.5 mt-2">
               <p className="text-sm font-semibold text-foreground">
-                {user.name}
+                {userData?.nome_usuario || "Usuário"}
               </p>
               <p className="text-xs text-muted-foreground truncate">
-                Empresa: {user.nameEmpresa}
+                Empresa: {empresaData?.nome_empresa || "-"}
               </p>
               <p className="text-xs text-muted-foreground truncate">
-                Filial: {user.nameEmpresa}
+                Filial: {filialData?.nome_filial || "-"}
               </p>
             </div>
             <DropdownMenuSeparator />
             <div className="space-y-2">
-              <DropdownMenuItem asChild>
-                <Link
-                  href="/change-password"
-                  className="w-full text-sm text-blue-600 hover:underline"
-                >
-                  <Key size={16} className="mr-2" />
-                  Alterar senha
-                </Link>
-              </DropdownMenuItem>
-
               <DropdownMenuItem
                 onClick={logout}
                 className="w-full text-sm text-red-600 hover:text-red-700"

@@ -17,15 +17,8 @@ export default function UploadImage({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Primeiro retorna o arquivo
+      // Só retorna o arquivo (File), nunca base64
       onChange(file);
-
-      // Em seguida, retorna base64 para preview
-      const reader = new FileReader();
-      reader.onload = () => {
-        onChange(reader.result as string);
-      };
-      reader.readAsDataURL(file);
     }
   };
 
