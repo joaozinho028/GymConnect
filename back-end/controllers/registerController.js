@@ -2,14 +2,10 @@ const supabase = require("../db");
 const bcrypt = require("bcrypt");
 
 const register = async (req, res) => {
-  const {
-    nome_usuario,
-    email_usuario,
-    senha_usuario,
-    id_empresa,
-    id_filial,
-    id_perfil,
-  } = req.body;
+  const { nome_usuario, email_usuario, senha_usuario, id_filial, id_perfil } =
+    req.body;
+
+  const { id_empresa } = req.user;
 
   try {
     // Verifica se já existe usuário com o mesmo email
@@ -43,17 +39,22 @@ const register = async (req, res) => {
       .select();
 
     if (error) {
-      return res
-        .status(500)
-        .json({ message: "Erro ao cadastrar usuário", error });
+      return res.status(500).json({
+        message: error.message || "Erro ao cadastrar usuário.",
+        error,
+      });
     }
 
-    res
-      .status(201)
-      .json({ message: "Usuário cadastrado com sucesso", user: data[0] });
+    res.status(201).json({
+      message: "Usuário cadastrado com sucesso!",
+      user: data && data[0] ? data[0] : null,
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Erro no servidor" });
+    res.status(500).json({
+      message: err?.message || "Erro no servidor.",
+      error: err,
+    });
   }
 };
 

@@ -13,8 +13,8 @@ const { register } = require("../controllers/registerController");
 
 const router = express.Router();
 
-// Cadastro
-router.post("/register", register);
+// Cadastro (protegido)
+router.post("/register", authMiddleware, register);
 
 // Login
 router.post("/login", login);

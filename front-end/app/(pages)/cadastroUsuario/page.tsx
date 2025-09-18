@@ -3,41 +3,131 @@
 import Button from "@/components/Forms/Button";
 import Input from "@/components/Forms/Input";
 import InputSelectComponent from "@/components/Forms/InputSelect";
+import { useAuth } from "@/contexts/AuthContext";
 import { GetForm } from "@/utils";
 import { ChevronRight, Save } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Swal from "sweetalert2";
 import * as yup from "yup";
 
 const CadastrarUsuarios = ({ ...rest }: any) => {
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [senha, setSenha] = useState("");
-  const [perfil, setPerfil] = useState("");
-  const [filial, setFilial] = useState("");
-  const [yupSchema, setYupSchema] = useState<
-    yup.ObjectSchema<{}, yup.AnyObject, {}, "">
-  >(yup.object().shape({}));
-  const { handleSubmit, ...form } = GetForm(yupSchema, setYupSchema);
+  // Centralizar controle dos campos no form handler
+  const formRef = useRef<any>(null);
+  const { token } = useAuth();
 
-  const onSubmitFunction = async () => {
-    const aluno = {
-      nome,
-      email,
-      senha,
-      perfil,
+  const schema = yup.object().shape({
+    nome: yup.string().required("Preencha o nome!"),
+    email: yup.string().email("Email inválido!").required("Preencha o email!"),
+    senha: yup
+      .string()
+      .min(6, "Mínimo 6 caracteres!")
+      .required("Preencha a senha!"),
+    perfil: yup.string().required("Selecione o perfil!"),
+    filial: yup.string().required("Selecione a filial!"),
+  });
+
+  const { handleSubmit, ...form } = GetForm(schema);
+  formRef.current = form;
+
+  const onSubmitFunction = async (values: any) => {
+    const usuario = {
+      nome_usuario: values.nome,
+      email_usuario: values.email,
+      senha_usuario: values.senha,
+      id_perfil: values.perfil,
+      id_filial: values.filial,
     };
-    console.log("Aluno cadastrado:", aluno);
+    try {
+      const res = await fetch("http://localhost:5000/auth/register", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(usuario),
+      });
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (e) {
+        data = {};
+      }
+      if (res.ok) {
+        Swal.fire({
+          text: data?.message || "Usuário cadastrado com sucesso!",
+          timer: 2000,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+        });
+        form.reset();
+      } else {
+        Swal.fire({
+          icon: "error",
+          text: data?.message || "Erro ao cadastrar usuário.",
+          timer: 2500,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+        });
+      }
+    } catch (err: any) {
+      Swal.fire({
+        icon: "error",
+        text: err?.message || "Erro ao conectar ao servidor.",
+        timer: 2500,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end",
+      });
+    }
   };
 
-  const opcaoPerfil = [
-    { value: 1, label: "Administrador" },
-    { value: 2, label: "Atendimento" },
-  ];
+  // Opções dinâmicas de perfil e filial
+  const [opcaoPerfil, setOpcaoPerfil] = useState([]);
+  const [opcaoFilial, setOpcaoFilial] = useState([]);
 
-  const opcaoFilial = [
-    { value: 1, label: "Filial 1" },
-    { value: 2, label: "Filial 2" },
-  ];
+  useEffect(() => {
+    async function fetchOpcoes() {
+      try {
+        // Buscar perfis
+        const resPerfil = await fetch(
+          "http://localhost:5000/empresas/listar-perfis",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        if (resPerfil.ok) {
+          const dataPerfil = await resPerfil.json();
+          setOpcaoPerfil(
+            (dataPerfil || []).map((p: any) => ({
+              value: p.id_perfil ?? p.id,
+              label: p.nome_perfil ?? p.nome,
+            }))
+          );
+        }
+        // Buscar filiais
+        const resFilial = await fetch(
+          "http://localhost:5000/empresas/listar-filiais",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        if (resFilial.ok) {
+          const dataFilial = await resFilial.json();
+          setOpcaoFilial(
+            (dataFilial || []).map((f: any) => ({
+              value: f.id_filial ?? f.id,
+              label: f.nome_filial ?? f.nome,
+            }))
+          );
+        }
+      } catch (err) {
+        // Silenciar erro, pode exibir alerta se desejar
+      }
+    }
+    fetchOpcoes();
+  }, []);
 
   return (
     <div className="p-4 max-w-7xl mx-auto space-y-8">
@@ -62,8 +152,6 @@ const CadastrarUsuarios = ({ ...rest }: any) => {
               required
               error="Preencha esse campo!"
               formulario={form}
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
               width="w-full"
             />
             <Input
@@ -73,8 +161,6 @@ const CadastrarUsuarios = ({ ...rest }: any) => {
               error="Preencha esse campo!"
               required
               formulario={form}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
               width="w-full"
             />
           </div>
@@ -86,8 +172,8 @@ const CadastrarUsuarios = ({ ...rest }: any) => {
               required
               error="Preencha esse campo!"
               formulario={form}
-              onChange={(e) => setSenha(e.target.value)}
               width="w-full"
+              type="password"
             />
             <InputSelectComponent
               label="Filial"
@@ -95,8 +181,6 @@ const CadastrarUsuarios = ({ ...rest }: any) => {
               required
               error="Preencha esse campo!"
               formulario={form}
-              value={filial}
-              onChange={(e) => setFilial(e.target.value)}
               options={opcaoFilial}
               width="w-full"
             />
@@ -106,8 +190,6 @@ const CadastrarUsuarios = ({ ...rest }: any) => {
               required
               error="Preencha esse campo!"
               formulario={form}
-              value={perfil}
-              onChange={(e) => setPerfil(e.target.value)}
               options={opcaoPerfil}
               width="w-full"
             />

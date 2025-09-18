@@ -4,6 +4,7 @@ const supabaseStorage = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_KEY
 ); // para o Storage
+
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 

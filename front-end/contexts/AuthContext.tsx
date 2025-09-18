@@ -6,7 +6,8 @@ import { createContext, useContext, useEffect, useState } from "react";
 type AuthContextType = {
   isAuthenticated: boolean;
   token: string | null;
-  login: (token: string) => void;
+  user: any | null;
+  login: (token: string, user?: any) => void;
   logout: () => void;
 };
 
@@ -17,15 +18,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<any | null>(null);
 
   // Checar token salvo no localStorage quando o app inicia
   useEffect(() => {
     const savedToken = localStorage.getItem("token");
+    const savedUser = localStorage.getItem("user");
     if (savedToken) {
       setToken(savedToken);
       setIsAuthenticated(true);
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
+      }
     } else {
       setIsAuthenticated(false);
+      setUser(null);
     }
   }, []);
 
@@ -39,22 +46,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [isAuthenticated, pathname, router]);
 
-  const login = (jwtToken: string) => {
+  const login = (jwtToken: string, userObj?: any) => {
     localStorage.setItem("token", jwtToken);
     setToken(jwtToken);
     setIsAuthenticated(true);
+    if (userObj) {
+      setUser(userObj);
+      localStorage.setItem("user", JSON.stringify(userObj));
+    }
     router.push("/inicio");
   };
 
   const logout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setToken(null);
+    setUser(null);
     setIsAuthenticated(false);
     router.push("/login");
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, token, login, logout }}>
+    <AuthContext.Provider
+      value={{ isAuthenticated, token, user, login, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );
