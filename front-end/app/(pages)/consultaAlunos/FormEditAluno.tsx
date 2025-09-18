@@ -36,7 +36,7 @@ const filiaisMock = [
   // ...outras filiais...
 ];
 
-const EditarCadastroAluno = ({ alunoSelecionado, rest }: any) => {
+const EditarCadastroAluno = ({ usuarioSelecionado, rest }: any) => {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");

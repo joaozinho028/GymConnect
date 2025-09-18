@@ -5,6 +5,8 @@ const cors = require("cors");
 const authRoutes = require("./routes/auth");
 const dadosBancariosRoutes = require("./routes/dadosBancarios");
 const empresaRoutes = require("./routes/empresa");
+const usuarioRoutes = require("./routes/usuario");
+const usuarioEditRoutes = require("./routes/usuarioEdit");
 const supabase = require("./db");
 
 const app = express();
@@ -14,7 +16,8 @@ app.use(express.json());
 app.use("/auth", authRoutes);
 app.use("/dados-bancarios", dadosBancariosRoutes);
 app.use("/empresas", empresaRoutes);
-
+app.use("/usuarios", usuarioRoutes);
+app.use("/usuarios-edit", usuarioEditRoutes);
 app.get("/", (req, res) => {
   res.send("API está rodando.");
 });
