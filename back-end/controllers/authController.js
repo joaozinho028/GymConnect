@@ -41,7 +41,9 @@ const login = async (req, res) => {
         nome_usuario: userData.nome_usuario,
         email_usuario: userData.email_usuario,
       },
-      process.env.JWT_SECRET,
+      // process.env.JWT_SECRET,
+      e4f9b2c7d1a8e6f3b5c0d9a7f1e8b6c3d2f4a1e7c9b0d5a8f2e6c7b9d0a1f3e5
+
       { expiresIn: "8h" }
     );
 

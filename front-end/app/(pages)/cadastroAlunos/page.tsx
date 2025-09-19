@@ -21,14 +21,29 @@ const CadastrarAluno = ({ ...rest }: any) => {
 
   const onSubmitFunction = async () => {
     const aluno = {
-      nome,
-      email,
-      telefone,
-      cpf,
-      plano,
-      matricula,
+      nome_aluno: nome,
+      email_aluno: email,
+      telefone_aluno: telefone,
+      cpf_aluno: cpf,
+      plano_aluno: plano,
+      matricula_aluno: matricula,
     };
     console.log("Aluno cadastrado:", aluno);
+    try {
+      const response = await fetch("http://localhost:5000/cadastrar-aluno", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(aluno),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        alert("Aluno cadastrado com sucesso!");
+      } else {
+        alert(data.error || "Erro ao cadastrar aluno.");
+      }
+    } catch (error) {
+      alert("Erro ao conectar com o servidor.");
+    }
   };
 
   const opcoesPlano = [
