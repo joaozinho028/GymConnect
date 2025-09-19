@@ -122,12 +122,12 @@ const EditarCadastroUsuario = ({ usuario, onSave, ...rest }: any) => {
   };
 
   return (
-    <div className="p-4 max-w-2xl mx-auto space-y-8">
+    <div className="p-4 w-full space-y-8">
       <div className="w-full bg-white p-6 rounded-lg sm:p-10">
         <form
           onSubmit={handleSubmit(onSubmitFunction)}
           {...rest}
-          className="space-y-4"
+          className="space-y-4 w-full"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
@@ -168,20 +168,7 @@ const EditarCadastroUsuario = ({ usuario, onSave, ...rest }: any) => {
               width="w-full"
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <InputSelectComponent
-              label="Status"
-              name="status"
-              required
-              error="Selecione o status!"
-              formulario={form}
-              options={[
-                { value: "ativo", label: "Ativo" },
-                { value: "inativo", label: "Inativo" },
-              ]}
-              width="w-full"
-            />
-          </div>
+
           <div className="grid grid-cols-1 sm:flex sm:justify-end sm:space-x-4 gap-2 sm:pt-4">
             <Button
               className="p-2 w-full sm:w-[150px] bg-green-600 cursor-pointer hover:bg-green-700 text-white hover:text-white"

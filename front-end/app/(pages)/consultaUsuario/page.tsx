@@ -474,7 +474,6 @@ export default function ConsultaUsuarios() {
           onClose={() => setModalOpen(false)}
           hasForm={false}
           hasSaveButton={false}
-          className="h-[80vh] w-[90vw] md:w-[100vw] lg:w-[900px]"
         >
           <EditarCadastroUsuario
             usuario={usuarioSelecionado}
