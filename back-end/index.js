@@ -21,14 +21,35 @@ app.get("/", (req, res) => {
   res.send("API está rodando.");
 });
 
-app.get("/test-supabase", async (req, res) => {
-  const { data, error } = await supabase.from("empresas").select("*").limit(1);
-  if (error) {
-    return res.status(500).json({ error: error.message });
-  }
-  res.json({ data });
-});
+// app.get("/test-supabase", async (req, res) => {
+//   const { data, error } = await supabase.from("empresas").select("*").limit(1);
+//   if (error) {
+//     return res.status(500).json({ error: error.message });
+//   }
+//   res.json({ data });
+// });
 
 // const PORT = process.env.PORT;
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+
+const fetch = require("node-fetch");
+
+const FRONTEND_URL = "https://sistema-gym-connect.onrender.com/login";
+const BACKEND_URL = "https://gymconnect-txn1.onrender.com/test-supabase";
+
+function ping(url) {
+  fetch(url)
+    .then((res) => console.log(`Ping ${url} status: ${res.status}`))
+    .catch((err) => console.error(`Erro ping ${url}:`, err));
+}
+
+// Ping inicial ao iniciar o backend
+ping(FRONTEND_URL);
+ping(BACKEND_URL);
+
+// Ping a cada 10 minutos
+setInterval(() => {
+  ping(FRONTEND_URL);
+  ping(BACKEND_URL);
+}, 10 * 60 * 1000);
