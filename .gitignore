@@ -12,8 +12,8 @@ yarn-debug.log*
 yarn-error.log*
 
 # Environment variables
-.env
-.env.*
+# .env
+# .env.*
 
 # OS
 .DS_Store
@@ -32,7 +32,7 @@ front-end/.env*
 
 # Back-end specific
 back-end/node_modules/
-back-end/.env*
+# back-end/.env*
 back-end/*.log
 
 # Misc
