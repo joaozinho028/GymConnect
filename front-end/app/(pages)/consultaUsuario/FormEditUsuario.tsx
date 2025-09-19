@@ -41,7 +41,7 @@ const EditarCadastroUsuario = ({ usuario, onSave, ...rest }: any) => {
     async function fetchOpcoes() {
       try {
         const resPerfil = await fetch(
-          "http://localhost:5000/empresas/listar-perfis",
+          `${process.env.NEXT_PUBLIC_API_URL}/empresas/listar-perfis`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -56,7 +56,7 @@ const EditarCadastroUsuario = ({ usuario, onSave, ...rest }: any) => {
           );
         }
         const resFilial = await fetch(
-          "http://localhost:5000/empresas/listar-filiais",
+          `${process.env.NEXT_PUBLIC_API_URL}/empresas/listar-filiais`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -86,7 +86,7 @@ const EditarCadastroUsuario = ({ usuario, onSave, ...rest }: any) => {
         status_usuario: values.status === "ativo",
       };
       const res = await fetch(
-        `http://localhost:5000/usuarios/atualizar-usuario`,
+        `${process.env.NEXT_PUBLIC_API_URL}/usuarios/atualizar-usuario`,
         {
           method: "PUT",
           headers: {

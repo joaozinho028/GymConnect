@@ -41,7 +41,7 @@ const DadosBancarios = ({ ...rest }: any) => {
     async function fetchDados() {
       if (!token) return;
       const res = await fetch(
-        "http://localhost:5000/dados-bancarios/buscar-dados-bancarios",
+        `${process.env.NEXT_PUBLIC_API_URL}/dados-bancarios/buscar-dados-bancarios`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -86,7 +86,7 @@ const DadosBancarios = ({ ...rest }: any) => {
     };
     try {
       const res = await fetch(
-        "http://localhost:5000/dados-bancarios/cadastrar-dados-bancarios",
+        `${process.env.NEXT_PUBLIC_API_URL}/dados-bancarios/cadastrar-dados-bancarios`,
         {
           method: "POST",
           headers: {

@@ -69,7 +69,7 @@ const CadastrarPerfis = ({ ...rest }: any) => {
     console.log("Enviando para o backend:", payload);
 
     try {
-      const res = await fetch("http://localhost:5000/perfis/cadastrar-perfil", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/perfis/cadastrar-perfil`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -145,7 +145,7 @@ const CadastrarPerfis = ({ ...rest }: any) => {
     async function fetchFiliais() {
       try {
         const res = await fetch(
-          "http://localhost:5000/empresas/listar-filiais",
+          `${process.env.NEXT_PUBLIC_API_URL}/empresas/listar-filiais`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }

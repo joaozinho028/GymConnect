@@ -30,7 +30,7 @@ const CadastrarAluno = ({ ...rest }: any) => {
     };
     console.log("Aluno cadastrado:", aluno);
     try {
-      const response = await fetch("http://localhost:5000/cadastrar-aluno", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cadastrar-aluno`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(aluno),

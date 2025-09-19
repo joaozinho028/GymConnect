@@ -46,7 +46,7 @@ export default function ProfilePage() {
       return;
     }
     try {
-      const res = await fetch("http://localhost:5000/auth/alterar-senha", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/alterar-senha`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -82,7 +82,7 @@ export default function ProfilePage() {
   useEffect(() => {
     async function fetchProfile() {
       if (!token) return;
-      const res = await fetch("http://localhost:5000/auth/profile", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/profile`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -127,7 +127,7 @@ export default function ProfilePage() {
     const formData = new FormData();
     formData.append("avatar", newAvatar);
     try {
-      const res = await fetch("http://localhost:5000/auth/avatar", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/avatar`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

@@ -43,7 +43,7 @@ const Header: FC<HeaderProps> = () => {
   useEffect(() => {
     async function fetchProfile() {
       if (!token) return;
-      const res = await fetch("http://localhost:5000/auth/profile", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/profile`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,

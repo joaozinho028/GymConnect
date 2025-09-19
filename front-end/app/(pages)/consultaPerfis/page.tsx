@@ -108,7 +108,7 @@ export default function ConsultaPerfis() {
   useEffect(() => {
     async function fetchPerfis() {
       try {
-        const res = await fetch("http://localhost:5000/perfis/listar-perfis", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/perfis/listar-perfis`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -296,7 +296,7 @@ export default function ConsultaPerfis() {
                             );
                             try {
                               const res = await fetch(
-                                "http://localhost:5000/perfis/alterar-status",
+                                `${process.env.NEXT_PUBLIC_API_URL}/perfis/alterar-status`,
                                 {
                                   method: "PUT",
                                   headers: {

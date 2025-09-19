@@ -29,7 +29,7 @@ export default function ConsultaUsuarios() {
     async function fetchUsuarios() {
       try {
         const res = await fetch(
-          "http://localhost:5000/usuarios/listar-usuarios",
+          `${process.env.NEXT_PUBLIC_API_URL}/usuarios/listar-usuarios`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -298,7 +298,7 @@ export default function ConsultaUsuarios() {
                                 // Buscar status do perfil do usuário
                                 try {
                                   const resPerfil = await fetch(
-                                    `http://localhost:5000/perfis/listar-perfis?id_perfil=${usuario.id_perfil}`,
+                                    `${process.env.NEXT_PUBLIC_API_URL}/perfis/listar-perfis?id_perfil=${usuario.id_perfil}`,
                                     {
                                       headers: {
                                         Authorization: `Bearer ${token}`,
@@ -363,7 +363,7 @@ export default function ConsultaUsuarios() {
                               );
                               try {
                                 const res = await fetch(
-                                  "http://localhost:5000/usuarios/alterar-status",
+                                  `${process.env.NEXT_PUBLIC_API_URL}/usuarios/alterar-status`,
                                   {
                                     method: "PUT",
                                     headers: {

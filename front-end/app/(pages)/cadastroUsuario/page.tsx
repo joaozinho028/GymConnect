@@ -39,7 +39,7 @@ const CadastrarUsuarios = ({ ...rest }: any) => {
     };
     try {
       const res = await fetch(
-        "http://localhost:5000/usuarios/cadastrar-usuario",
+        `${process.env.NEXT_PUBLIC_API_URL}/usuarios/cadastrar-usuario`,
         {
           method: "POST",
           headers: {
@@ -96,7 +96,7 @@ const CadastrarUsuarios = ({ ...rest }: any) => {
       try {
         // Buscar perfis
         const resPerfil = await fetch(
-          "http://localhost:5000/empresas/listar-perfis",
+          `${process.env.NEXT_PUBLIC_API_URL}/empresas/listar-perfis`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -112,7 +112,7 @@ const CadastrarUsuarios = ({ ...rest }: any) => {
         }
         // Buscar filiais
         const resFilial = await fetch(
-          "http://localhost:5000/empresas/listar-filiais",
+          `${process.env.NEXT_PUBLIC_API_URL}/empresas/listar-filiais`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
