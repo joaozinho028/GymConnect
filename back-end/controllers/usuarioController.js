@@ -94,6 +94,40 @@ const alterarStatusUsuario = async (req, res) => {
   try {
     const { id_usuario, status_usuario } = req.body;
     const { id_empresa } = req.user;
+
+    // Se for ativar o usuário, buscar o id_perfil dele e ativar o perfil também
+    if (status_usuario === true) {
+      // Buscar o usuário para pegar o id_perfil
+      const { data: usuarioData, error: usuarioError } = await supabase
+        .from("usuarios")
+        .select("id_perfil")
+        .eq("id_usuario", id_usuario)
+        .eq("id_empresa", id_empresa)
+        .maybeSingle();
+      if (usuarioError) {
+        return res
+          .status(500)
+          .json({ message: "Erro ao buscar usuário.", error: usuarioError });
+      }
+      if (!usuarioData || !usuarioData.id_perfil) {
+        return res
+          .status(404)
+          .json({ message: "Usuário ou perfil não encontrado." });
+      }
+      // Ativar o perfil
+      const { error: perfilError } = await supabase
+        .from("perfis")
+        .update({ status_perfil: true })
+        .eq("id_perfil", usuarioData.id_perfil)
+        .eq("id_empresa", id_empresa);
+      if (perfilError) {
+        return res.status(500).json({
+          message: "Erro ao ativar perfil do usuário.",
+          error: perfilError,
+        });
+      }
+    }
+
     const { data, error } = await supabase
       .from("usuarios")
       .update({ status_usuario })
