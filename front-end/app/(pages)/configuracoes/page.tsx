@@ -12,7 +12,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import CadastrarPerfis from "../cadastroPerfil/page";
 import CadastrarUsuarios from "../cadastroUsuario/page";
@@ -30,6 +30,13 @@ type MenuItem = {
 };
 
 export default function FormEditaPerfil() {
+  const [isDesktop, setIsDesktop] = useState(true);
+  useEffect(() => {
+    const check = () => setIsDesktop(window.innerWidth >= 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
   // Menu estático (não modificado)
   const menus: MenuItem[] = [
     {
@@ -135,9 +142,26 @@ export default function FormEditaPerfil() {
     SelectedComponent = menus[selectedMenuIndex].component!;
   }
 
+  if (!isDesktop) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh] text-center p-6">
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 max-w-md w-full">
+          <Settings2 className="w-10 h-10 mx-auto mb-4 text-gray-500" />
+          <h2 className="text-lg font-semibold mb-2">Configurações</h2>
+          <p className="text-gray-600 dark:text-gray-300">
+            Esta área está disponível apenas em computadores e notebooks.
+            <br />
+            Acesse em uma tela maior para editar as configurações do sistema.
+          </p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="w-full h-[87vh] flex flex-col md:flex-row">
+      {/* ...existing code... */}
       <nav className="w-64 md:w-64 bg-white dark:bg-gray-900 border-r border-gray-300 dark:border-gray-700 p-4 h-full overflow-auto">
+        {/* ...existing code... */}
         <p className="text-lg mb-4 flex items-center gap-2 dark:text-white font-semibold">
           <Settings2 className="w-6 h-6" />
           Configurações
@@ -145,14 +169,13 @@ export default function FormEditaPerfil() {
         <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
           Selecione uma opção abaixo para editar as configurações do sistema.
         </p>
-
         <ul className="space-y-2 text-sm">
+          {/* ...existing code... */}
           {menus.map((menu, i) => {
             const Icon = menu.icon;
             const isDropdownOpen = openDropdowns[menu.name] || false;
             const isMenuSelected =
               selectedMenuIndex === i && selectedSubmenuIndex === null;
-
             if (menu.submenu) {
               return (
                 <li key={menu.name}>
@@ -189,7 +212,6 @@ export default function FormEditaPerfil() {
                         const SubIcon = sub.icon;
                         const isSubSelected =
                           selectedMenuIndex === i && selectedSubmenuIndex === j;
-
                         return (
                           <li key={sub.name}>
                             <button
@@ -212,7 +234,6 @@ export default function FormEditaPerfil() {
                 </li>
               );
             }
-
             return (
               <li key={menu.name}>
                 <button
@@ -232,7 +253,6 @@ export default function FormEditaPerfil() {
           })}
         </ul>
       </nav>
-
       <section className="flex-1 p-5 overflow-auto bg-white dark:bg-gray-800 h-full">
         {SelectedComponent ? (
           <SelectedComponent />
