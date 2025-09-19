@@ -38,14 +38,17 @@ const CadastrarUsuarios = ({ ...rest }: any) => {
       id_filial: values.filial,
     };
     try {
-      const res = await fetch("http://localhost:5000/auth/register", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(usuario),
-      });
+      const res = await fetch(
+        "http://localhost:5000/usuarios/cadastrar-usuario",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(usuario),
+        }
+      );
       let data = null;
       try {
         data = await res.json();

@@ -9,12 +9,8 @@ const {
   getAvatar,
 } = require("../controllers/authController");
 const authMiddleware = require("../middleware/authMiddleware");
-const { register } = require("../controllers/registerController");
 
 const router = express.Router();
-
-// Cadastro (protegido)
-router.post("/register", authMiddleware, register);
 
 // Login
 router.post("/login", login);

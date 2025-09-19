@@ -319,7 +319,7 @@ export default function ConsultaUsuarios() {
                               );
                               try {
                                 const res = await fetch(
-                                  "http://localhost:5000/usuarios-edit/alterar-status",
+                                  "http://localhost:5000/usuarios/alterar-status",
                                   {
                                     method: "PUT",
                                     headers: {
