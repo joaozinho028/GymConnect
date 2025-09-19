@@ -474,10 +474,10 @@ export default function FluxoCaixaPage() {
 
   // ...existing code...
   return (
-    <div className="p-4 max-w-7xl mx-auto space-y-6">
-      {/* Filial e ações */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="max-w-xs w-full">
+    <div className="p-2 sm:p-4 max-w-7xl mx-auto space-y-6">
+      {/* Filial e ações - mobile first */}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="w-full sm:max-w-xs">
           <label className="block text-sm font-medium mb-1" htmlFor="filial">
             Filial
           </label>
@@ -485,7 +485,7 @@ export default function FluxoCaixaPage() {
             id="filial"
             value={selectedFilial}
             onChange={(e) => setSelectedFilial(e.target.value)}
-            className="w-full border rounded px-2 py-1"
+            className="w-full border rounded px-2 py-2 text-sm"
           >
             {filiais.map((f) => (
               <option key={f} value={f}>
@@ -494,42 +494,41 @@ export default function FluxoCaixaPage() {
             ))}
           </select>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:gap-2">
           <button
             title="Nova Transação"
-            className="bg-blue-100 p-2 rounded hover:bg-blue-200 cursor-pointer"
+            className="bg-blue-100 w-full sm:w-auto p-2 rounded hover:bg-blue-200 cursor-pointer text-sm"
             onClick={() => setShowTransactionModal(true)}
           >
             Nova Transação
           </button>
           <button
             title="Categorias"
-            className="bg-gray-100 p-2 rounded hover:bg-gray-200 cursor-pointer"
+            className="bg-gray-100 w-full sm:w-auto p-2 rounded hover:bg-gray-200 cursor-pointer text-sm"
             onClick={() => setShowCategoryModal(true)}
           >
             Categorias
           </button>
           <button
             title="Importar Transações"
-            className="bg-gray-100 p-2 rounded hover:bg-gray-200 cursor-pointer"
+            className="bg-gray-100 w-full sm:w-auto p-2 rounded hover:bg-gray-200 cursor-pointer text-sm"
             onClick={() => setShowImportModal(true)}
           >
             Importar Transações
           </button>
           <button
             title="Gerar Relatório"
-            className="bg-gray-100 p-2 rounded hover:bg-gray-200 cursor-pointer flex items-center gap-2"
+            className="bg-gray-100 w-full sm:w-auto p-2 rounded hover:bg-gray-200 cursor-pointer flex items-center gap-2 text-sm"
             onClick={() => console.log("Gerar relatório")}
           >
-            {" "}
             <Copy size={16} /> <span>Gerar Relatório</span>
           </button>
         </div>
       </div>
 
       {/* Filtros avançados */}
-      <div className="bg-white shadow rounded-lg p-4 mb-4">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
+      <div className="bg-white shadow rounded-lg p-3 sm:p-4 mb-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-6 sm:gap-4 items-center">
           <div>
             <label className="text-sm">Data Inicial</label>
             <input
@@ -607,7 +606,7 @@ export default function FluxoCaixaPage() {
       </div>
 
       {/* Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         <div className="bg-green-100 text-green-800 shadow rounded-lg p-4">
           <h3 className="text-sm font-medium text-gray-600">
             Entradas (período)
@@ -637,15 +636,15 @@ export default function FluxoCaixaPage() {
       </div>
 
       {/* Meses e exportação */}
-      <div className="bg-white shadow rounded-lg p-4">
-        <div className="flex flex-col md:flex-row md:items-center md:gap-4">
+      <div className="bg-white shadow rounded-lg p-3 sm:p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
           <div className="flex flex-wrap gap-2 items-center">
             <label className="text-sm font-medium mr-2">Meses:</label>
             {(allCashFlowDataByFilial[selectedFilial] || []).map((m) => (
               <button
                 key={m.month}
                 onClick={() => toggleMonth(m.month)}
-                className={`px-3 py-1 rounded-full text-sm border ${
+                className={`px-3 py-1 rounded-full text-xs sm:text-sm border ${
                   selectedMonths.includes(m.month)
                     ? "bg-green-500 text-white"
                     : "bg-gray-100"
@@ -660,8 +659,8 @@ export default function FluxoCaixaPage() {
       </div>
 
       {/* Gráficos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white shadow rounded-lg p-4">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="bg-white shadow rounded-lg p-3 sm:p-4">
           <h2 className="font-semibold mb-4">Fluxo de Caixa</h2>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart
@@ -686,7 +685,7 @@ export default function FluxoCaixaPage() {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white shadow rounded-lg p-4">
+        <div className="bg-white shadow rounded-lg p-3 sm:p-4">
           <h2 className="font-semibold mb-4">Gráfico por Categoria</h2>
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
@@ -718,10 +717,10 @@ export default function FluxoCaixaPage() {
       </div>
 
       {/* Listagem de transações com busca, exportação e layout customizado */}
-      <div className="bg-white shadow rounded-lg p-4 mt-6">
+      <div className="bg-white shadow rounded-lg p-2 sm:p-4 mt-6">
         <h2 className="font-semibold mb-4">Transações</h2>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
-          <div className="flex w-full sm:w-1/2 items-end gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 mb-6">
+          <div className="flex flex-col gap-2 w-full sm:w-1/2">
             <div className="relative w-full">
               <input
                 type="text"
@@ -731,11 +730,11 @@ export default function FluxoCaixaPage() {
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                className="w-full h-[42px] p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-[#222222] pl-10"
+                className="w-full h-[38px] p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-[#222222] pl-10 text-sm"
               />
               <Copy
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                size={20}
+                size={18}
               />
             </div>
             <select
@@ -744,8 +743,8 @@ export default function FluxoCaixaPage() {
                 setSelectedFilial(e.target.value);
                 setPage(1);
               }}
-              className="h-[42px] border border-gray-300 rounded px-3 text-[#222222] bg-white"
-              style={{ minWidth: 120 }}
+              className="h-[38px] border border-gray-300 rounded px-2 text-[#222222] bg-white text-sm"
+              style={{ minWidth: 100 }}
             >
               {filiais.map((filial) => (
                 <option key={filial} value={filial}>
@@ -754,47 +753,45 @@ export default function FluxoCaixaPage() {
               ))}
             </select>
           </div>
-          <div className="flex w-full sm:w-1/2 justify-end">
-            <div className="flex flex-wrap gap-2">
-              <button
-                className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-blue-100 text-blue-700 hover:bg-blue-200 text-sm"
-                onClick={() => exportToCSV(pageItems)}
-                type="button"
-                title="Exportar CSV"
-              >
-                <Copy size={16} /> CSV
-              </button>
-              <button
-                className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-green-100 text-green-700 hover:bg-green-200 text-sm"
-                onClick={() => exportToExcel(pageItems)}
-                type="button"
-                title="Exportar Excel"
-              >
-                <Copy size={16} /> Excel
-              </button>
-              <button
-                className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-red-100 text-red-700 hover:bg-red-200 text-sm"
-                onClick={() => exportToPDF(pageItems)}
-                type="button"
-                title="Exportar PDF"
-              >
-                <Copy size={16} /> PDF
-              </button>
-              <button
-                className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm"
-                onClick={() => copyTable(pageItems)}
-                type="button"
-                title="Copiar tabela"
-              >
-                <Copy size={16} /> Copiar
-              </button>
-            </div>
+          <div className="flex flex-wrap gap-2 w-full sm:w-1/2 justify-end">
+            <button
+              className="flex items-center gap-2 px-2 py-2 h-[38px] rounded bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs sm:text-sm"
+              onClick={() => exportToCSV(pageItems)}
+              type="button"
+              title="Exportar CSV"
+            >
+              <Copy size={14} /> CSV
+            </button>
+            <button
+              className="flex items-center gap-2 px-2 py-2 h-[38px] rounded bg-green-100 text-green-700 hover:bg-green-200 text-xs sm:text-sm"
+              onClick={() => exportToExcel(pageItems)}
+              type="button"
+              title="Exportar Excel"
+            >
+              <Copy size={14} /> Excel
+            </button>
+            <button
+              className="flex items-center gap-2 px-2 py-2 h-[38px] rounded bg-red-100 text-red-700 hover:bg-red-200 text-xs sm:text-sm"
+              onClick={() => exportToPDF(pageItems)}
+              type="button"
+              title="Exportar PDF"
+            >
+              <Copy size={14} /> PDF
+            </button>
+            <button
+              className="flex items-center gap-2 px-2 py-2 h-[38px] rounded bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs sm:text-sm"
+              onClick={() => copyTable(pageItems)}
+              type="button"
+              title="Copiar tabela"
+            >
+              <Copy size={14} /> Copiar
+            </button>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table
-            className="min-w-full divide-y divide-gray-200"
-            style={{ tableLayout: "fixed" }}
+            className="min-w-full divide-y divide-gray-200 text-xs sm:text-sm"
+            style={{ tableLayout: "fixed", minWidth: 600 }}
           >
             <thead className="bg-gray-50">
               <tr>
