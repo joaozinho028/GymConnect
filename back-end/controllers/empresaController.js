@@ -1,6 +1,5 @@
 const supabase = require("../db");
 
-// Listar perfis da empresa do usuário logado
 const listarPerfis = async (req, res) => {
   try {
     const id_empresa = req.user.id_empresa;
@@ -20,7 +19,6 @@ const listarPerfis = async (req, res) => {
   }
 };
 
-// Listar filiais da empresa do usuário logado
 const listarFiliais = async (req, res) => {
   try {
     const id_empresa = req.user.id_empresa;

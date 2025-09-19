@@ -57,6 +57,7 @@ const CadastrarUsuarios = ({ ...rest }: any) => {
       }
       if (res.ok) {
         Swal.fire({
+          icon: "success",
           text: data?.message || "Usuário cadastrado com sucesso!",
           timer: 2000,
           showConfirmButton: false,

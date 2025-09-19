@@ -1,14 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const {
-  getDadosBancarios,
-  saveDadosBancarios,
+  buscarDadosBancarios,
+  salvarDadosBancarios,
 } = require("../controllers/dadosBancariosController");
 const authMiddleware = require("../middleware/authMiddleware");
 
-// Buscar dados bancários da empresa
-router.get("/buscar-dados-bancarios", authMiddleware, getDadosBancarios);
-// Cadastrar/atualizar dados bancários da empresa
-router.post("/cadastrar-dados-bancarios", authMiddleware, saveDadosBancarios);
+router.get("/buscar-dados-bancarios", authMiddleware, buscarDadosBancarios);
+router.post("/cadastrar-dados-bancarios", authMiddleware, salvarDadosBancarios);
 
 module.exports = router;

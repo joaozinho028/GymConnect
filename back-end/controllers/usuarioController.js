@@ -118,4 +118,4 @@ const alterarStatusUsuario = async (req, res) => {
   }
 };
 
-module.exports = { listarUsuarios, alterarStatusUsuario, cadastrarUsuario };
+module.exports = { cadastrarUsuario, listarUsuarios, alterarStatusUsuario };

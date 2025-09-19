@@ -1,7 +1,6 @@
 const supabase = require("../db");
 
-// Busca dados bancários da empresa pelo id_empresa
-exports.getDadosBancarios = async (req, res) => {
+const buscarDadosBancarios = async (req, res) => {
   try {
     const { id_empresa } = req.user;
     const { data, error } = await supabase
@@ -21,8 +20,7 @@ exports.getDadosBancarios = async (req, res) => {
   }
 };
 
-// Cadastra ou atualiza dados bancários da empresa
-exports.saveDadosBancarios = async (req, res) => {
+const salvarDadosBancarios = async (req, res) => {
   try {
     const { id_empresa } = req.user;
     const { banco, agencia, conta, tipo_conta, cpf_cnpj, titular } = req.body;
@@ -63,3 +61,5 @@ exports.saveDadosBancarios = async (req, res) => {
     res.status(500).json({ message: "Erro ao salvar dados bancários." });
   }
 };
+
+module.exports = { buscarDadosBancarios, salvarDadosBancarios };

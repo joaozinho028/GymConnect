@@ -293,6 +293,50 @@ export default function ConsultaUsuarios() {
                               const novoStatus = !Boolean(
                                 usuario.status_usuario
                               );
+                              // Se for ativar, verificar se o perfil está ativo
+                              if (novoStatus) {
+                                // Buscar status do perfil do usuário
+                                try {
+                                  const resPerfil = await fetch(
+                                    `http://localhost:5000/perfis/listar-perfis?id_perfil=${usuario.id_perfil}`,
+                                    {
+                                      headers: {
+                                        Authorization: `Bearer ${token}`,
+                                      },
+                                    }
+                                  );
+                                  if (resPerfil.ok) {
+                                    const perfis = await resPerfil.json();
+                                    // O endpoint agora retorna apenas o perfil solicitado (array de 1 ou vazio)
+                                    const perfilUsuario =
+                                      Array.isArray(perfis) && perfis.length > 0
+                                        ? perfis[0]
+                                        : null;
+                                    if (
+                                      !perfilUsuario ||
+                                      perfilUsuario.status === false
+                                    ) {
+                                      Swal.fire({
+                                        icon: "warning",
+                                        text: "Não é possível ativar este usuário porque o perfil dele está inativo. Para ativar o usuário, ative o perfil correspondente.",
+                                        confirmButtonText: "OK",
+                                        showConfirmButton: true,
+                                      });
+                                      return;
+                                    }
+                                  }
+                                } catch (e) {
+                                  Swal.fire({
+                                    icon: "error",
+                                    text: "Erro ao verificar status do perfil.",
+                                    timer: 2500,
+                                    showConfirmButton: false,
+                                    toast: true,
+                                    position: "top-end",
+                                  });
+                                  return;
+                                }
+                              }
                               const confirm = await Swal.fire({
                                 title: novoStatus
                                   ? "Ativar usuário?"

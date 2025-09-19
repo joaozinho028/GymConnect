@@ -1,5 +1,5 @@
-
 "use client";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,25 +11,8 @@ import {
   Search,
   Shield,
 } from "lucide-react";
-import { useState } from "react";
-
-// Mock de perfis
-const perfisMock = [
-  {
-    id: 1,
-    nome: "Administrador",
-    filial: "Filial 2",
-    permissoes: ["Criar", "Editar", "Excluir", "Visualizar"],
-    criadoEm: "10/01/2024 10:30",
-  },
-  {
-    id: 2,
-    nome: "Usuário Padrão",
-    filial: "Filial 1",
-    permissoes: ["Visualizar"],
-    criadoEm: "15/02/2024 13:40",
-  },
-];
+import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 
 // Exportar CSV
 function exportToCSV(data: any[]) {
@@ -112,13 +95,50 @@ function copyTable(data: any[]) {
 }
 
 export default function ConsultaPerfis() {
+  const { token } = useAuth();
+
   const [busca, setBusca] = useState("");
-  const [perfis, setPerfis] = useState(perfisMock);
+  const [perfis, setPerfis] = useState<any[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [perfilSelecionado, setPerfilSelecionado] = useState<any>(null);
 
   const [page, setPage] = useState(1);
   const pageSize = 5;
+
+  useEffect(() => {
+    async function fetchPerfis() {
+      try {
+        const res = await fetch("http://localhost:5000/perfis/listar-perfis", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPerfis(data);
+        } else {
+          const data = await res.json();
+          Swal.fire({
+            icon: "error",
+            text: data?.message || "Erro ao buscar usuários.",
+            timer: 2500,
+            showConfirmButton: false,
+            toast: true,
+            position: "top-end",
+          });
+        }
+      } catch (err: any) {
+        Swal.fire({
+          icon: "error",
+          text: err?.message || "Erro ao conectar ao servidor.",
+          timer: 2500,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+        });
+      }
+    }
+    if (token) fetchPerfis();
+  }, [token]);
+
   const perfisFiltrados = perfis.filter(
     (p) =>
       p.nome.toLowerCase().includes(busca.toLowerCase()) ||
@@ -199,7 +219,7 @@ export default function ConsultaPerfis() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Ação
+                  Ações
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                   Nome
@@ -207,8 +227,8 @@ export default function ConsultaPerfis() {
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                   Filial
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Permissões
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase w-[420px] min-w-[320px] max-w-[600px]">
+                  Permissões ( pra ver todas segure shift + scroll do mouse)
                 </th>
               </tr>
             </thead>
@@ -223,16 +243,123 @@ export default function ConsultaPerfis() {
                 pageItems.map((perfil) => (
                   <tr key={perfil.id} className="hover:bg-gray-50">
                     <td className="px-4 py-2">
-                      <button
-                        title="Editar"
-                        className="p-2 rounded cursor-pointer hover:bg-gray-100 text-green-600"
-                        onClick={() => {
-                          setPerfilSelecionado(perfil);
-                          setModalOpen(true);
-                        }}
-                      >
-                        <Pencil size={18} />
-                      </button>
+                      <div className="flex flex-row items-center justify-center gap-3 min-w-[90px]">
+                        <button
+                          title="Editar"
+                          className="p-2 rounded cursor-pointer hover:bg-gray-100 text-green-600"
+                          onClick={() => {
+                            setPerfilSelecionado(perfil);
+                            setModalOpen(true);
+                          }}
+                        >
+                          <Pencil size={18} />
+                        </button>
+
+                        <button
+                          type="button"
+                          aria-label={
+                            Boolean(perfil.status)
+                              ? "Desativar perfil"
+                              : "Ativar perfil"
+                          }
+                          className={`relative w-12 h-6 flex items-center rounded-full transition-colors duration-300 focus:outline-none border border-gray-300 cursor-pointer ${
+                            Boolean(perfil.status)
+                              ? "bg-green-400"
+                              : "bg-red-400"
+                          }`}
+                          style={{ minWidth: 48 }}
+                          onClick={async () => {
+                            const novoStatus = !Boolean(perfil.status);
+                            const confirm = await Swal.fire({
+                              title: novoStatus
+                                ? "Ativar perfil?"
+                                : "Inativar perfil?",
+                              text: novoStatus
+                                ? "Deseja ativar este perfil?"
+                                : "Ao inativar este perfil, todos os usuários relacionados também serão inativados. Deseja continuar?",
+                              icon: "question",
+                              showCancelButton: true,
+                              confirmButtonText: novoStatus
+                                ? "Ativar"
+                                : "Inativar",
+                              cancelButtonText: "Cancelar",
+                              reverseButtons: true,
+                              focusCancel: true,
+                            });
+                            if (!confirm.isConfirmed) return;
+                            setPerfis((prev) =>
+                              prev.map((u) =>
+                                u.id === perfil.id
+                                  ? { ...u, status: novoStatus }
+                                  : u
+                              )
+                            );
+                            try {
+                              const res = await fetch(
+                                "http://localhost:5000/perfis/alterar-status",
+                                {
+                                  method: "PUT",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                    Authorization: `Bearer ${token}`,
+                                  },
+                                  body: JSON.stringify({
+                                    id_perfil: perfil.id,
+                                    status_perfil: novoStatus,
+                                  }),
+                                }
+                              );
+                              if (!res.ok) {
+                                const data = await res.json();
+                                setPerfis((prev) =>
+                                  prev.map((u) =>
+                                    u.id === perfil.id
+                                      ? { ...u, status: !novoStatus }
+                                      : u
+                                  )
+                                );
+                                Swal.fire({
+                                  icon: "error",
+                                  text:
+                                    data?.message ||
+                                    "Erro ao atualizar status.",
+                                  timer: 2000,
+                                  showConfirmButton: false,
+                                  toast: true,
+                                  position: "top-end",
+                                });
+                              }
+                            } catch (err) {
+                              setPerfis((prev) =>
+                                prev.map((u) =>
+                                  u.id === perfil.id
+                                    ? { ...u, status: !novoStatus }
+                                    : u
+                                )
+                              );
+                              ({
+                                icon: "error",
+                                text:
+                                  String(err) ||
+                                  "Erro ao conectar ao servidor.",
+                                timer: 2000,
+                                showConfirmButton: false,
+                                toast: true,
+                                position: "top-end",
+                              });
+                            }
+                          }}
+                        >
+                          <span
+                            className={`absolute transition-transform duration-300 h-5 w-5 rounded-full bg-white border border-gray-300 shadow ${
+                              Boolean(perfil.status)
+                                ? "translate-x-6"
+                                : "translate-x-0"
+                            }`}
+                            style={{ top: 2 }}
+                          />
+                        </button>
+                      </div>
                     </td>
                     <td className="px-4 py-2 flex items-center gap-2">
                       <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-200">
@@ -241,8 +368,13 @@ export default function ConsultaPerfis() {
                       {perfil.nome}
                     </td>
                     <td className="px-4 py-2">{perfil.filial}</td>
-                    <td className="px-4 py-2">
-                      {perfil.permissoes.join(", ")}
+                    <td
+                      className="px-4 py-2 whitespace-nowrap overflow-x-auto w-[420px] min-w-[320px] max-w-[600px]"
+                      style={{ maxWidth: 600, minWidth: 320 }}
+                    >
+                      <div style={{ overflowX: "auto" }}>
+                        {perfil.permissoes.join(", ")}
+                      </div>
                     </td>
                   </tr>
                 ))
