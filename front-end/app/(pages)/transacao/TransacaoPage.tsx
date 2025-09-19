@@ -1,3 +1,4 @@
+"use client";
 import Button from "@/components/Forms/Button";
 import Input from "@/components/Forms/Input";
 import InputSelectComponent from "@/components/Forms/InputSelect";

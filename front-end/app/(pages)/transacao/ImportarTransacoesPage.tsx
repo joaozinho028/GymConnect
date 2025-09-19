@@ -1,3 +1,5 @@
+"use client";
+
 import UploadFile from "@/components/UploadFile/UploadFileComponent";
 import { useState } from "react";
 
