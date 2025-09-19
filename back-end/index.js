@@ -7,7 +7,6 @@ const authRoutes = require("./routes/auth");
 const usuarioRoutes = require("./routes/usuario");
 const perfilRoutes = require("./routes/perfil");
 const empresaRoutes = require("./routes/empresa");
-const alunoRoutes = require("./routes/aluno");
 const supabase = require("./db");
 
 const app = express();
@@ -18,7 +17,6 @@ app.use("/auth", authRoutes);
 app.use("/usuarios", usuarioRoutes);
 app.use("/perfis", perfilRoutes);
 app.use("/empresas", empresaRoutes);
-app.use("/alunos", alunoRoutes);
 app.get("/", (req, res) => {
   res.send("API está rodando.");
 });
