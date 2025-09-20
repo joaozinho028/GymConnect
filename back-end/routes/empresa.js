@@ -1,11 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const {
+  cadastrarFilial,
   listarPerfis,
   listarFiliais,
 } = require("../controllers/empresaController");
 const authMiddleware = require("../middleware/authMiddleware");
 
+router.post("/cadastrar-filial", authMiddleware, cadastrarFilial);
 router.get("/listar-perfis", authMiddleware, listarPerfis);
 router.get("/listar-filiais", authMiddleware, listarFiliais);
 

@@ -1,5 +1,90 @@
 const supabase = require("../db");
 
+const cadastrarFilial = async (req, res) => {
+  try {
+    const id_empresa = req.user.id_empresa;
+    const {
+      nome_filial,
+      cnpj_filial,
+      telefone_filial,
+      cep_filial,
+      rua_filial,
+      numero_filial,
+      bairro_filial,
+      cidade_filial,
+      estado_filial,
+    } = req.body;
+
+    // Validações básicas
+    if (
+      !nome_filial ||
+      !cnpj_filial ||
+      !telefone_filial ||
+      !cep_filial ||
+      !rua_filial ||
+      !numero_filial ||
+      !bairro_filial ||
+      !cidade_filial ||
+      !estado_filial
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Todos os campos são obrigatórios" });
+    }
+
+    // Verificar se o CNPJ já existe
+    const { data: filialExistente, error: errorCheck } = await supabase
+      .from("filiais")
+      .select("id_filial")
+      .eq("cnpj_filial", cnpj_filial)
+      .single();
+
+    if (filialExistente) {
+      return res.status(400).json({ message: "CNPJ já cadastrado" });
+    }
+
+    // Criar objeto de endereço JSON
+    const endereco = {
+      cep: cep_filial,
+      rua: rua_filial,
+      numero: numero_filial,
+      bairro: bairro_filial,
+      cidade: cidade_filial,
+      estado: estado_filial,
+    };
+
+    // Inserir nova filial
+    const { data, error } = await supabase
+      .from("filiais")
+      .insert({
+        id_empresa,
+        nome_filial,
+        cnpj_filial,
+        telefone_filial,
+        endereco,
+        tipo_filial: "filial", // Sempre será filial
+        status_filial: true,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Erro ao cadastrar filial:", error);
+      return res
+        .status(500)
+        .json({ message: "Erro ao cadastrar filial", error });
+    }
+
+    res.status(201).json({
+      message: "Filial cadastrada com sucesso",
+      filial: data,
+    });
+  } catch (err) {
+    console.error("Erro no servidor:", err);
+    res.status(500).json({ message: "Erro no servidor" });
+  }
+};
+
 const listarPerfis = async (req, res) => {
   try {
     const id_empresa = req.user.id_empresa;
@@ -37,4 +122,4 @@ const listarFiliais = async (req, res) => {
   }
 };
 
-module.exports = { listarPerfis, listarFiliais };
+module.exports = { cadastrarFilial, listarPerfis, listarFiliais };
