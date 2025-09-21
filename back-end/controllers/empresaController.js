@@ -154,7 +154,7 @@ const ConsultarFiliais = async (req, res) => {
 const listarFiliais = async (req, res) => {
   try {
     const id_empresa = req.user.id_empresa;
-    console.log("ID da empresa do usuário logado:", id_empresa);
+    // console.log("ID da empresa do usuário logado:", id_empresa);
     const { data, error } = await supabase
       .from("filiais")
       .select("id_filial, nome_filial")

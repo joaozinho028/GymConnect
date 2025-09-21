@@ -1,5 +1,6 @@
 "use client";
 import ModalComponente from "@/components/Modal/ModalComponent";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,7 +12,8 @@ import {
   Search,
   User,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 import EditarCadastroAluno from "./FormEditAluno";
 
 const alunosMock = [
@@ -72,17 +74,23 @@ function exportToCSV(data: any[]) {
     "Aluno",
     "Data de Cadastro",
     "Matrícula",
-    "Cadastrado por",
+    "CPF",
+    "Situação",
     "Status",
   ];
   const rows = data.map((aluno) => [
-    aluno.nome,
-    aluno.dataCadastro,
-    aluno.matricula,
-    aluno.cadastradoPor === "admin"
-      ? "João Vítor Marcelino"
-      : aluno.cadastradoPor,
-    aluno.status,
+    aluno.nome_aluno,
+    aluno.data_cadastro
+      ? new Date(aluno.data_cadastro).toLocaleDateString("pt-BR")
+      : "N/A",
+    aluno.matricula_aluno,
+    aluno.cpf_aluno,
+    aluno.situacao === "regular"
+      ? "Regular"
+      : aluno.situacao === "aguardando pagamento"
+      ? "Aguardando Pagamento"
+      : aluno.situacao || "N/A",
+    aluno.status_aluno ? "Ativo" : "Inativo",
   ]);
   const csvContent = [header, ...rows]
     .map((e) => e.map((v) => `"${v}"`).join(","))
@@ -111,7 +119,8 @@ function exportToPDF(data: any[]) {
       <th style="padding:4px;border:1px solid #ccc;">Aluno</th>
       <th style="padding:4px;border:1px solid #ccc;">Data de Cadastro</th>
       <th style="padding:4px;border:1px solid #ccc;">Matrícula</th>
-      <th style="padding:4px;border:1px solid #ccc;">Cadastrado por</th>
+      <th style="padding:4px;border:1px solid #ccc;">CPF</th>
+      <th style="padding:4px;border:1px solid #ccc;">Situação</th>
       <th style="padding:4px;border:1px solid #ccc;">Status</th>
     </tr>
   `;
@@ -119,17 +128,26 @@ function exportToPDF(data: any[]) {
     .map(
       (aluno) => `
       <tr>
-        <td style="padding:4px;border:1px solid #ccc;">${aluno.nome}</td>
+        <td style="padding:4px;border:1px solid #ccc;">${aluno.nome_aluno}</td>
         <td style="padding:4px;border:1px solid #ccc;">${
-          aluno.dataCadastro
+          aluno.data_cadastro
+            ? new Date(aluno.data_cadastro).toLocaleDateString("pt-BR")
+            : "N/A"
         }</td>
-        <td style="padding:4px;border:1px solid #ccc;">${aluno.matricula}</td>
         <td style="padding:4px;border:1px solid #ccc;">${
-          aluno.cadastradoPor === "admin"
-            ? "João Vítor Marcelino"
-            : aluno.cadastradoPor
+          aluno.matricula_aluno
         }</td>
-        <td style="padding:4px;border:1px solid #ccc;">${aluno.status}</td>
+        <td style="padding:4px;border:1px solid #ccc;">${aluno.cpf_aluno}</td>
+        <td style="padding:4px;border:1px solid #ccc;">${
+          aluno.situacao === "regular"
+            ? "Regular"
+            : aluno.situacao === "aguardando pagamento"
+            ? "Aguardando Pagamento"
+            : aluno.situacao || "N/A"
+        }</td>
+        <td style="padding:4px;border:1px solid #ccc;">${
+          aluno.status_aluno ? "Ativo" : "Inativo"
+        }</td>
       </tr>
     `
     )
@@ -154,17 +172,23 @@ function copyTable(data: any[]) {
     "Aluno",
     "Data de Cadastro",
     "Matrícula",
-    "Cadastrado por",
+    "CPF",
+    "Situação",
     "Status",
   ];
   const rows = data.map((aluno) => [
-    aluno.nome,
-    aluno.dataCadastro,
-    aluno.matricula,
-    aluno.cadastradoPor === "admin"
-      ? "João Vítor Marcelino"
-      : aluno.cadastradoPor,
-    aluno.status,
+    aluno.nome_aluno,
+    aluno.data_cadastro
+      ? new Date(aluno.data_cadastro).toLocaleDateString("pt-BR")
+      : "N/A",
+    aluno.matricula_aluno,
+    aluno.cpf_aluno,
+    aluno.situacao === "regular"
+      ? "Regular"
+      : aluno.situacao === "aguardando pagamento"
+      ? "Aguardando Pagamento"
+      : aluno.situacao || "N/A",
+    aluno.status_aluno ? "Ativo" : "Inativo",
   ]);
   const tableText = [header, ...rows].map((e) => e.join("\t")).join("\n");
   navigator.clipboard.writeText(tableText);
@@ -173,18 +197,63 @@ function copyTable(data: any[]) {
 
 export default function ConsultaAlunos() {
   const [busca, setBusca] = useState("");
-  const [alunos, setAlunos] = useState(alunosMock);
+  const [alunos, setAlunos] = useState<any[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [alunoSelecionado, setAlunoSelecionado] = useState<any>(null);
+  const { token } = useAuth();
 
   const [page, setPage] = useState(1);
   const pageSize = 5;
+
+  useEffect(() => {
+    async function fetchAlunos() {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/alunos/consultar-alunos`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setAlunos(data);
+        } else {
+          const data = await res.json();
+          Swal.fire({
+            icon: "error",
+            text: data?.message || "Erro ao buscar alunos.",
+            timer: 2500,
+            showConfirmButton: false,
+            toast: true,
+            position: "top-end",
+          });
+        }
+      } catch (err: any) {
+        Swal.fire({
+          icon: "error",
+          text: err?.message || "Erro ao conectar ao servidor.",
+          timer: 2500,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+        });
+      }
+    }
+    if (token) fetchAlunos();
+  }, [token]);
+
   const alunosFiltrados = alunos.filter(
     (a) =>
-      a.nome.toLowerCase().includes(busca.toLowerCase()) ||
-      a.matricula.toLowerCase().includes(busca.toLowerCase()) ||
-      a.cadastradoPor.toLowerCase().includes(busca.toLowerCase()) ||
-      a.status.toLowerCase().includes(busca.toLowerCase())
+      (a.nome_aluno &&
+        a.nome_aluno.toLowerCase().includes(busca.toLowerCase())) ||
+      (a.matricula_aluno &&
+        a.matricula_aluno.toLowerCase().includes(busca.toLowerCase())) ||
+      (a.email_aluno &&
+        a.email_aluno.toLowerCase().includes(busca.toLowerCase())) ||
+      (a.cpf_aluno &&
+        a.cpf_aluno.toLowerCase().includes(busca.toLowerCase())) ||
+      (a.plano_aluno &&
+        a.plano_aluno.toLowerCase().includes(busca.toLowerCase()))
   );
   const totalPages = Math.max(1, Math.ceil(alunosFiltrados.length / pageSize));
   const pageItems = alunosFiltrados.slice(
@@ -278,7 +347,7 @@ export default function ConsultaAlunos() {
                   Matrícula
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Token de Acesso
+                  CPF
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                   Cadastrado por
@@ -297,7 +366,7 @@ export default function ConsultaAlunos() {
             >
               {pageItems.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-6 text-gray-400">
+                  <td colSpan={8} className="text-center py-6 text-gray-400">
                     Nenhum aluno encontrado.
                   </td>
                 </tr>
@@ -305,7 +374,7 @@ export default function ConsultaAlunos() {
                 <>
                   {pageItems.map((aluno) => (
                     <tr
-                      key={aluno.id}
+                      key={aluno.id_aluno}
                       className="hover:bg-gray-50"
                       style={{ height: "60px" }}
                     >
@@ -322,42 +391,48 @@ export default function ConsultaAlunos() {
                           <Pencil size={18} />
                         </button>
                       </td>
-                      <td className="px-4 py-2">{aluno.nome}</td>
-                      <td className="px-4 py-2">{aluno.dataCadastro}</td>
-                      <td className="px-4 py-2">{aluno.matricula}</td>
-                      <td className="px-4 py-2">{aluno.tokenAcesso}</td>
+                      <td className="px-4 py-2">{aluno.nome_aluno}</td>
+                      <td className="px-4 py-2">
+                        {aluno.data_cadastro
+                          ? new Date(aluno.data_cadastro).toLocaleDateString(
+                              "pt-BR"
+                            )
+                          : "N/A"}
+                      </td>
+                      <td className="px-4 py-2">{aluno.matricula_aluno}</td>
+                      <td className="px-4 py-2">{aluno.cpf_aluno}</td>
                       <td className="px-4 py-2 flex items-center gap-2">
                         <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-200">
                           <User size={18} className="text-gray-500" />
                         </span>
-                        <span>
-                          {aluno.cadastradoPor === "admin"
-                            ? "João Vítor Marcelino"
-                            : aluno.cadastradoPor}
-                        </span>
+                        <span>Sistema</span>
                       </td>
                       <td className="px-4 py-2">
                         <span
                           className={
-                            aluno.situacao === "Regular"
+                            aluno.situacao === "regular"
                               ? "px-2 py-1 rounded text-xs bg-green-100 text-green-700"
-                              : aluno.situacao === "Inadimplente de pagamento"
+                              : aluno.situacao === "aguardando pagamento"
                               ? "px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-700"
                               : "px-2 py-1 rounded text-xs bg-gray-200 text-gray-700"
                           }
                         >
-                          {aluno.situacao}
+                          {aluno.situacao === "regular"
+                            ? "Regular"
+                            : aluno.situacao === "aguardando pagamento"
+                            ? "Aguardando Pagamento"
+                            : aluno.situacao || "N/A"}
                         </span>
                       </td>
                       <td className="px-4 py-2">
                         <span
                           className={
-                            aluno.status === "Ativo"
+                            aluno.status_aluno
                               ? "px-2 py-1 rounded text-xs bg-green-100 text-green-700"
                               : "px-2 py-1 rounded text-xs bg-red-100 text-red-700"
                           }
                         >
-                          {aluno.status}
+                          {aluno.status_aluno ? "Ativo" : "Inativo"}
                         </span>
                       </td>
                     </tr>
@@ -366,7 +441,7 @@ export default function ConsultaAlunos() {
                   {Array.from({ length: 5 - pageItems.length }).map(
                     (_, idx) => (
                       <tr key={`empty-${idx}`} style={{ height: "60px" }}>
-                        <td colSpan={6} />
+                        <td colSpan={8} />
                       </tr>
                     )
                   )}
