@@ -332,10 +332,51 @@ const consultarAlunos = async (req, res) => {
   }
 };
 
+const obterEstatisticasAlunos = async (req, res) => {
+  try {
+    const { id_filial } = req.params;
+    const { id_empresa } = req.user;
+
+    console.log(
+      `Buscando estatísticas para filial: ${id_filial}, empresa: ${id_empresa}`
+    );
+
+    // Buscar todos os alunos da filial e empresa
+    const { data: alunos, error } = await supabase
+      .from("alunos")
+      .select("status_aluno, situacao")
+      .eq("id_empresa", id_empresa)
+      .eq("id_filial", id_filial);
+
+    if (error) {
+      console.error("Erro ao buscar alunos:", error);
+      return res.status(500).json({ error: "Erro ao buscar estatísticas" });
+    }
+
+    // Contar alunos por status
+    const estatisticas = {
+      cadastrados: alunos.length,
+      ativos: alunos.filter((aluno) => aluno.status_aluno === true).length,
+      inativos: alunos.filter((aluno) => aluno.status_aluno === false).length,
+      inadimplentes: alunos.filter(
+        (aluno) => aluno.situacao === "aguardando pagamento"
+      ).length,
+    };
+
+    console.log("Estatísticas calculadas:", estatisticas);
+
+    res.json(estatisticas);
+  } catch (error) {
+    console.error("Erro ao obter estatísticas:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+};
+
 module.exports = {
   cadastrarAluno,
   consultarAlunos,
   confirmarPagamentoBoleto,
   calcularValorPlano,
   gerarMatriculaUnica,
+  obterEstatisticasAlunos,
 };

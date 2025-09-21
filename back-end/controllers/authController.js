@@ -12,7 +12,6 @@ const login = async (req, res) => {
   const { email, senha } = req.body;
 
   try {
-    // Buscar usuário pelo email
     const { data: userData, error: userError } = await supabase
       .from("usuarios")
       .select(
@@ -25,13 +24,42 @@ const login = async (req, res) => {
       return res.status(401).json({ message: "Credenciais inválidas" });
     }
 
-    // Validar senha usando bcrypt
     const senhaValida = await bcrypt.compare(senha, userData.senha_usuario);
     if (!senhaValida) {
       return res.status(401).json({ message: "Credenciais inválidas" });
     }
 
-    // Gerar token JWT com dados relevantes
+    const { data: perfilData, error: perfilError } = await supabase
+      .from("perfis")
+      .select("permissoes_perfil")
+      .eq("id_perfil", userData.id_perfil)
+      .single();
+
+    console.log("🔍 Dados do perfil encontrados:", perfilData);
+
+    if (perfilError) {
+      console.error("Erro ao buscar permissões do perfil:", perfilError);
+      return res
+        .status(500)
+        .json({ message: "Erro ao buscar permissões do perfil" });
+    }
+
+    const permissoes = perfilData?.permissoes_perfil || {
+      alunos: true,
+      filiais: true,
+      fluxo_caixa: false,
+      importacao: false,
+      exportacao: false,
+      configuracoes: {
+        informacoes_bancarias: false,
+        plano_gym_connect: false,
+        configuracoes_app: false,
+        historico_usuario: false,
+        usuarios: true,
+        perfis: true,
+      },
+    };
+
     const token = jwt.sign(
       {
         id_usuario: userData.id_usuario,
@@ -40,6 +68,7 @@ const login = async (req, res) => {
         id_perfil: userData.id_perfil,
         nome_usuario: userData.nome_usuario,
         email_usuario: userData.email_usuario,
+        permissoes: permissoes,
       },
       process.env.JWT_SECRET,
       { expiresIn: "8h" }
@@ -54,6 +83,7 @@ const login = async (req, res) => {
         id_filial: userData.id_filial,
         id_perfil: userData.id_perfil,
         email_usuario: userData.email_usuario,
+        permissoes: permissoes,
       },
     });
   } catch (err) {
