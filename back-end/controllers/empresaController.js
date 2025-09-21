@@ -104,6 +104,53 @@ const listarPerfis = async (req, res) => {
   }
 };
 
+const ConsultarFiliais = async (req, res) => {
+  try {
+    const { id_empresa } = req.user;
+    const { id_filial } = req.query;
+
+    if (!id_empresa) {
+      return res.status(400).json({ message: "Empresa é obrigatória." });
+    }
+
+    let query = supabase
+      .from("filiais")
+      .select(
+        `id_filial, nome_filial, cnpj_filial, telefone_filial, endereco, tipo_filial, status_filial, criado_em`
+      )
+      .eq("id_empresa", id_empresa);
+
+    if (id_filial) {
+      query = query.eq("id_filial", Number(id_filial));
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return res
+        .status(500)
+        .json({ message: "Erro ao buscar filiais.", error });
+    }
+
+    const filiais = (data || []).map((filial) => ({
+      id: filial.id_filial,
+      nome: filial.nome_filial,
+      cnpj: filial.cnpj_filial,
+      telefone: filial.telefone_filial,
+      endereco: filial.endereco,
+      tipo: filial.tipo_filial,
+      status: filial.status_filial,
+      criadoEm: filial.criado_em
+        ? new Date(filial.criado_em).toLocaleString("pt-BR")
+        : "",
+    }));
+
+    res.json(filiais);
+  } catch (err) {
+    res.status(500).json({ message: "Erro no servidor" });
+  }
+};
+
 const listarFiliais = async (req, res) => {
   try {
     const id_empresa = req.user.id_empresa;
@@ -122,4 +169,9 @@ const listarFiliais = async (req, res) => {
   }
 };
 
-module.exports = { cadastrarFilial, listarPerfis, listarFiliais };
+module.exports = {
+  cadastrarFilial,
+  ConsultarFiliais,
+  listarPerfis,
+  listarFiliais,
+};

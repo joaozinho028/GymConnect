@@ -21,7 +21,10 @@ const CadastrarFilial = ({ ...rest }: any) => {
   const [estado, setEstado] = useState("");
 
   const [yupSchema, setYupSchema] = useState(yup.object().shape({}));
-  const { handleSubmit, ...form } = GetForm(yupSchema, setYupSchema);
+  const { handleSubmit, setValue, ...form } = GetForm(yupSchema, setYupSchema);
+
+  // Incluir setValue no objeto form para os componentes Input
+  const formWithSetValue = { ...form, setValue };
 
   // Funções de máscara personalizadas
   const aplicarMascaraCNPJ = (valor: string) => {
@@ -66,6 +69,12 @@ const CadastrarFilial = ({ ...rest }: any) => {
           setBairro(data.bairro || "");
           setCidade(data.localidade || "");
           setEstado(data.uf || "");
+
+          // Atualizar também o formulário para validação
+          setValue("rua", data.logradouro || "");
+          setValue("bairro", data.bairro || "");
+          setValue("cidade", data.localidade || "");
+          setValue("estado", data.uf || "");
         } else {
           Swal.fire({
             icon: "warning",
@@ -126,7 +135,6 @@ const CadastrarFilial = ({ ...rest }: any) => {
       if (res.ok) {
         Swal.fire({
           icon: "success",
-          title: "Sucesso!",
           text: "Filial cadastrada com sucesso!",
           timer: 2500,
           showConfirmButton: false,
@@ -190,7 +198,7 @@ const CadastrarFilial = ({ ...rest }: any) => {
               name="nome"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={nome}
               onChange={(e) => setNome(e.target.value)}
             />
@@ -199,7 +207,7 @@ const CadastrarFilial = ({ ...rest }: any) => {
               name="cnpj"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={cnpj}
               onChange={(e) => {
                 const valorComMascara = aplicarMascaraCNPJ(e.target.value);
@@ -214,7 +222,7 @@ const CadastrarFilial = ({ ...rest }: any) => {
               name="telefone"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={telefone}
               onChange={(e) => {
                 const valorComMascara = aplicarMascaraTelefone(e.target.value);
@@ -226,7 +234,7 @@ const CadastrarFilial = ({ ...rest }: any) => {
               name="cep"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={cep}
               onChange={(e) => {
                 const valorComMascara = aplicarMascaraCEP(e.target.value);
@@ -242,7 +250,7 @@ const CadastrarFilial = ({ ...rest }: any) => {
               name="rua"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={rua}
               onChange={(e) => setRua(e.target.value)}
             />
@@ -251,7 +259,7 @@ const CadastrarFilial = ({ ...rest }: any) => {
               name="numero"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={numero}
               onChange={(e) => {
                 // Permitir apenas números
@@ -267,7 +275,7 @@ const CadastrarFilial = ({ ...rest }: any) => {
               name="bairro"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={bairro}
               onChange={(e) => setBairro(e.target.value)}
             />
@@ -276,7 +284,7 @@ const CadastrarFilial = ({ ...rest }: any) => {
               name="cidade"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={cidade}
               onChange={(e) => setCidade(e.target.value)}
             />
@@ -285,7 +293,7 @@ const CadastrarFilial = ({ ...rest }: any) => {
               name="estado"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={estado}
               onChange={(e) => setEstado(e.target.value)}
             />
