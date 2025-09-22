@@ -1,5 +1,6 @@
 "use client";
 import ModalComponente from "@/components/Modal/ModalComponent";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   ChevronLeft,
   ChevronRight,
@@ -9,119 +10,20 @@ import {
   FileText,
   Pencil,
   Search,
-  User,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 import EditarFilial from "./FormEditFilial";
 
-const filiaisMock = [
-  {
-    id: 1,
-    nome: "Academia Centro",
-    adicionadoEm: "2024-01-10",
-    alteradoEm: "2024-06-01",
-    alteradoPor: "admin",
-    status: "Ativo",
-  },
-  {
-    id: 2,
-    nome: "Academia Zona Sul",
-    adicionadoEm: "2024-02-15",
-    alteradoEm: "2024-07-05",
-    alteradoPor: "joao",
-    status: "Inativo",
-  },
-  {
-    id: 3,
-    nome: "Academia Zona Sul",
-    adicionadoEm: "2024-02-15",
-    alteradoEm: "2024-07-05",
-    alteradoPor: "joao",
-    status: "Inativo",
-  },
-  {
-    id: 4,
-    nome: "Academia Zona Sul",
-    adicionadoEm: "2024-02-15",
-    alteradoEm: "2024-07-05",
-    alteradoPor: "joao",
-    status: "Inativo",
-  },
-  {
-    id: 5,
-    nome: "Academia Zona Sul",
-    adicionadoEm: "2024-02-15",
-    alteradoEm: "2024-07-05",
-    alteradoPor: "joao",
-    status: "Inativo",
-  },
-  // Adicione mais objetos para testar a paginação
-  {
-    id: 6,
-    nome: "Academia Norte",
-    adicionadoEm: "2024-03-10",
-    alteradoEm: "2024-07-10",
-    alteradoPor: "maria",
-    status: "Ativo",
-  },
-  {
-    id: 7,
-    nome: "Academia Leste",
-    adicionadoEm: "2024-04-10",
-    alteradoEm: "2024-07-12",
-    alteradoPor: "carlos",
-    status: "Ativo",
-  },
-  {
-    id: 8,
-    nome: "Academia Oeste",
-    adicionadoEm: "2024-05-10",
-    alteradoEm: "2024-07-13",
-    alteradoPor: "ana",
-    status: "Inativo",
-  },
-  {
-    id: 9,
-    nome: "Academia Sul",
-    adicionadoEm: "2024-06-10",
-    alteradoEm: "2024-07-14",
-    alteradoPor: "joao",
-    status: "Ativo",
-  },
-  {
-    id: 10,
-    nome: "Academia Central",
-    adicionadoEm: "2024-07-10",
-    alteradoEm: "2024-07-15",
-    alteradoPor: "admin",
-    status: "Ativo",
-  },
-  {
-    id: 11,
-    nome: "Academia Nova",
-    adicionadoEm: "2024-08-10",
-    alteradoEm: "2024-08-01",
-    alteradoPor: "admin",
-    status: "Ativo",
-  },
-];
-
 function exportToCSV(data: any[]) {
-  const header = [
-    "Filial",
-    "Adicionado em",
-    "Alterado em",
-    "Alterado por",
-    "Status",
-  ];
+  const header = ["Filial", "CNPJ", "Telefone", "Tipo", "Criado em", "Status"];
   const rows = data.map((filial) => [
-    filial.nome,
-    filial.adicionadoEm,
-    filial.alteradoEm,
-    filial.alteradoPor === "admin"
-      ? "João Vítor Marcelino"
-      : filial.alteradoPor,
-    filial.status,
+    filial.nome || "",
+    filial.cnpj || "",
+    filial.telefone || "",
+    filial.tipo || "",
+    filial.criadoEm || "",
+    filial.status ? "Ativo" : "Inativo",
   ]);
   const csvContent = [header, ...rows]
     .map((e) => e.map((v) => `"${v}"`).join(","))
@@ -146,9 +48,10 @@ function exportToPDF(data: any[]) {
   const header = `
     <tr>
       <th style="padding:4px;border:1px solid #ccc;">Filial</th>
-      <th style="padding:4px;border:1px solid #ccc;">Adicionado em</th>
-      <th style="padding:4px;border:1px solid #ccc;">Alterado em</th>
-      <th style="padding:4px;border:1px solid #ccc;">Alterado por</th>
+      <th style="padding:4px;border:1px solid #ccc;">CNPJ</th>
+      <th style="padding:4px;border:1px solid #ccc;">Telefone</th>
+      <th style="padding:4px;border:1px solid #ccc;">Tipo</th>
+      <th style="padding:4px;border:1px solid #ccc;">Criado em</th>
       <th style="padding:4px;border:1px solid #ccc;">Status</th>
     </tr>
   `;
@@ -156,17 +59,18 @@ function exportToPDF(data: any[]) {
     .map(
       (filial) => `
       <tr>
-        <td style="padding:4px;border:1px solid #ccc;">${filial.nome}</td>
+        <td style="padding:4px;border:1px solid #ccc;">${filial.nome || ""}</td>
+        <td style="padding:4px;border:1px solid #ccc;">${filial.cnpj || ""}</td>
         <td style="padding:4px;border:1px solid #ccc;">${
-          filial.adicionadoEm
+          filial.telefone || ""
         }</td>
-        <td style="padding:4px;border:1px solid #ccc;">${filial.alteradoEm}</td>
+        <td style="padding:4px;border:1px solid #ccc;">${filial.tipo || ""}</td>
         <td style="padding:4px;border:1px solid #ccc;">${
-          filial.alteradoPor === "admin"
-            ? "João Vítor Marcelino"
-            : filial.alteradoPor
+          filial.criadoEm || ""
         }</td>
-        <td style="padding:4px;border:1px solid #ccc;">${filial.status}</td>
+        <td style="padding:4px;border:1px solid #ccc;">${
+          filial.status ? "Ativo" : "Inativo"
+        }</td>
       </tr>
     `
     )
@@ -187,21 +91,14 @@ function exportToPDF(data: any[]) {
 }
 
 function copyTable(data: any[]) {
-  const header = [
-    "Filial",
-    "Adicionado em",
-    "Alterado em",
-    "Alterado por",
-    "Status",
-  ];
+  const header = ["Filial", "CNPJ", "Telefone", "Tipo", "Criado em", "Status"];
   const rows = data.map((filial) => [
-    filial.nome,
-    filial.adicionadoEm,
-    filial.alteradoEm,
-    filial.alteradoPor === "admin"
-      ? "João Vítor Marcelino"
-      : filial.alteradoPor,
-    filial.status,
+    filial.nome || "",
+    filial.cnpj || "",
+    filial.telefone || "",
+    filial.tipo || "",
+    filial.criadoEm || "",
+    filial.status ? "Ativo" : "Inativo",
   ]);
   const tableText = [header, ...rows].map((e) => e.join("\t")).join("\n");
   navigator.clipboard.writeText(tableText);
@@ -210,19 +107,59 @@ function copyTable(data: any[]) {
 
 export default function ConsultaFiliais() {
   const [busca, setBusca] = useState("");
-  const [filiais, setFiliais] = useState(filiaisMock);
+  const [filiais, setFiliais] = useState<any[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const { token } = useAuth();
+
   const [filialSelecionada, setFilialSelecionada] = useState<any>(null);
 
   // Paginação
   const [page, setPage] = useState(1);
   const pageSize = 5;
 
+  useEffect(() => {
+    async function fetchFiliais() {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/empresas/consultar-filiais`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setFiliais(data);
+        } else {
+          const data = await res.json();
+          Swal.fire({
+            icon: "error",
+            text: data?.message || "Erro ao buscar filiais.",
+            timer: 2500,
+            showConfirmButton: false,
+            toast: true,
+            position: "top-end",
+          });
+        }
+      } catch (err: any) {
+        Swal.fire({
+          icon: "error",
+          text: err?.message || "Erro ao conectar ao servidor.",
+          timer: 2500,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+        });
+      }
+    }
+    if (token) fetchFiliais();
+  }, [token]);
+
   const filiaisFiltradas = filiais.filter(
     (f) =>
-      f.nome.toLowerCase().includes(busca.toLowerCase()) ||
-      f.alteradoPor.toLowerCase().includes(busca.toLowerCase()) ||
-      f.status.toLowerCase().includes(busca.toLowerCase())
+      (f.nome || "").toLowerCase().includes(busca.toLowerCase()) ||
+      (f.cnpj || "").toLowerCase().includes(busca.toLowerCase()) ||
+      (f.telefone || "").toLowerCase().includes(busca.toLowerCase()) ||
+      (f.tipo || "").toLowerCase().includes(busca.toLowerCase())
   );
 
   const totalPages = Math.max(1, Math.ceil(filiaisFiltradas.length / pageSize));
@@ -312,13 +249,13 @@ export default function ConsultaFiliais() {
                   Filial
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Adicionado em
+                  CNPJ
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Alterado em
+                  Telefone
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Alterado por
+                  Tipo
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                   Status
@@ -356,28 +293,19 @@ export default function ConsultaFiliais() {
                           <Pencil size={18} />
                         </button>
                       </td>
-                      <td className="px-4 py-2">{filial.nome}</td>
-                      <td className="px-4 py-2">{filial.adicionadoEm}</td>
-                      <td className="px-4 py-2">{filial.alteradoEm}</td>
-                      <td className="px-4 py-2 flex items-center gap-2">
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-200">
-                          <User size={18} className="text-gray-500" />
-                        </span>
-                        <span>
-                          {filial.alteradoPor === "admin"
-                            ? "João Vítor Marcelino"
-                            : filial.alteradoPor}
-                        </span>
-                      </td>
+                      <td className="px-4 py-2">{filial.nome || ""}</td>
+                      <td className="px-4 py-2">{filial.cnpj || ""}</td>
+                      <td className="px-4 py-2">{filial.telefone || ""}</td>
+                      <td className="px-4 py-2">{filial.tipo || ""}</td>
                       <td className="px-4 py-2">
                         <span
                           className={
-                            filial.status === "Ativo"
+                            filial.status
                               ? "px-2 py-1 rounded text-xs bg-green-100 text-green-700"
                               : "px-2 py-1 rounded text-xs bg-red-100 text-red-700"
                           }
                         >
-                          {filial.status}
+                          {filial.status ? "Ativo" : "Inativo"}
                         </span>
                       </td>
                     </tr>

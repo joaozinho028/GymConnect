@@ -1,9 +1,7 @@
 "use client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -15,93 +13,156 @@ import {
 } from "recharts";
 
 type CashFlowItem = { month: string; entrada: number; saida: number };
+
 type FilialData = {
+  id_filial: number;
+  nome_filial: string;
+};
+
+type EstatisticasData = {
   cadastrados: number;
   ativos: number;
   inativos: number;
   inadimplentes: number;
-  cashFlow: CashFlowItem[];
 };
-type FilialKey = "Filial A" | "Filial B" | "Filial C";
 
-const filiais: FilialKey[] = ["Filial A", "Filial B", "Filial C"];
-
-const cardsDataByFilial: Record<FilialKey, FilialData> = {
-  "Filial A": {
-    cadastrados: 1245,
-    ativos: 182,
-    inativos: 45,
-    inadimplentes: 12,
-    cashFlow: [
-      { month: "Janeiro", entrada: 12000, saida: 5000 },
-      { month: "Fevereiro", entrada: 10000, saida: 4000 },
-      { month: "Março", entrada: 15000, saida: 6000 },
-      { month: "Abril", entrada: 9000, saida: 3000 },
-      { month: "Maio", entrada: 13000, saida: 7000 },
-      { month: "Junho", entrada: 11000, saida: 4000 },
-      { month: "Julho", entrada: 14000, saida: 5000 },
-      { month: "Agosto", entrada: 12500, saida: 5500 },
-      { month: "Setembro", entrada: 0, saida: 0 },
-      { month: "Outubro", entrada: 0, saida: 0 },
-      { month: "Novembro", entrada: 0, saida: 0 },
-      { month: "Dezembro", entrada: 0, saida: 0 },
-    ],
-  },
-  "Filial B": {
-    cadastrados: 980,
-    ativos: 150,
-    inativos: 30,
-    inadimplentes: 8,
-    cashFlow: [
-      { month: "Janeiro", entrada: 8000, saida: 3000 },
-      { month: "Fevereiro", entrada: 9000, saida: 3500 },
-      { month: "Março", entrada: 9500, saida: 4000 },
-      { month: "Abril", entrada: 7000, saida: 2500 },
-      { month: "Maio", entrada: 10000, saida: 4500 },
-      { month: "Junho", entrada: 9000, saida: 3000 },
-      { month: "Julho", entrada: 11000, saida: 3500 },
-      { month: "Agosto", entrada: 10500, saida: 4000 },
-      { month: "Setembro", entrada: 0, saida: 0 },
-      { month: "Outubro", entrada: 0, saida: 0 },
-      { month: "Novembro", entrada: 0, saida: 0 },
-      { month: "Dezembro", entrada: 0, saida: 0 },
-    ],
-  },
-  "Filial C": {
-    cadastrados: 1100,
-    ativos: 120,
-    inativos: 25,
-    inadimplentes: 5,
-    cashFlow: [
-      { month: "Janeiro", entrada: 10000, saida: 4000 },
-      { month: "Fevereiro", entrada: 11000, saida: 4500 },
-      { month: "Março", entrada: 12000, saida: 5000 },
-      { month: "Abril", entrada: 9000, saida: 3500 },
-      { month: "Maio", entrada: 13000, saida: 6000 },
-      { month: "Junho", entrada: 11000, saida: 4000 },
-      { month: "Julho", entrada: 14000, saida: 5000 },
-      { month: "Agosto", entrada: 12500, saida: 5500 },
-      { month: "Setembro", entrada: 0, saida: 0 },
-      { month: "Outubro", entrada: 0, saida: 0 },
-      { month: "Novembro", entrada: 0, saida: 0 },
-      { month: "Dezembro", entrada: 0, saida: 0 },
-    ],
-  },
-};
+// Dados mockados do gráfico (manter como está)
+const cashFlowMockData: CashFlowItem[] = [
+  { month: "Janeiro", entrada: 12000, saida: 5000 },
+  { month: "Fevereiro", entrada: 10000, saida: 4000 },
+  { month: "Março", entrada: 15000, saida: 6000 },
+  { month: "Abril", entrada: 9000, saida: 3000 },
+  { month: "Maio", entrada: 13000, saida: 7000 },
+  { month: "Junho", entrada: 11000, saida: 4000 },
+  { month: "Julho", entrada: 14000, saida: 5000 },
+  { month: "Agosto", entrada: 12500, saida: 5500 },
+  { month: "Setembro", entrada: 0, saida: 0 },
+  { month: "Outubro", entrada: 0, saida: 0 },
+  { month: "Novembro", entrada: 0, saida: 0 },
+  { month: "Dezembro", entrada: 0, saida: 0 },
+];
 
 export default function DashboardPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
   const router = useRouter();
+
+  // Estados para dados reais
+  const [filiais, setFiliais] = useState<FilialData[]>([]);
+  const [selectedFilial, setSelectedFilial] = useState<number | null>(null);
+  const [estatisticas, setEstatisticas] = useState<EstatisticasData>({
+    cadastrados: 0,
+    ativos: 0,
+    inativos: 0,
+    inadimplentes: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [loadingStats, setLoadingStats] = useState(false);
+
+  // Estados para o gráfico (dados mockados)
+  const [selectedMonths, setSelectedMonths] = useState<string[]>(["Agosto"]);
+
   useEffect(() => {
     if (!isAuthenticated) {
       router.push("/login");
     }
   }, [isAuthenticated, router]);
-  const [selectedFilial, setSelectedFilial] = useState<FilialKey>(filiais[0]);
-  const [selectedMonths, setSelectedMonths] = useState<string[]>(["Agosto"]);
 
-  const { cadastrados, ativos, inativos, inadimplentes, cashFlow } =
-    cardsDataByFilial[selectedFilial];
+  // Carregar filiais quando o componente montar
+  useEffect(() => {
+    console.log(
+      "useEffect carregarFiliais - isAuthenticated:",
+      isAuthenticated,
+      "token:",
+      !!token,
+      "user:",
+      !!user
+    );
+    if (isAuthenticated && token && user) {
+      carregarFiliais();
+    }
+  }, [isAuthenticated, token, user]);
+
+  // Carregar estatísticas quando a filial for selecionada
+  useEffect(() => {
+    console.log(
+      "useEffect carregarEstatisticas - selectedFilial:",
+      selectedFilial,
+      "token:",
+      !!token
+    );
+    if (selectedFilial && token) {
+      carregarEstatisticas(selectedFilial);
+    }
+  }, [selectedFilial, token]);
+
+  const carregarFiliais = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/empresas/listar-filiais`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Filiais carregadas:", data);
+        setFiliais(data);
+
+        // Definir filial padrão como a do usuário logado
+        if (user?.id_filial && data.length > 0) {
+          const filialExiste = data.find(
+            (f: FilialData) => f.id_filial === user.id_filial
+          );
+          if (filialExiste) {
+            setSelectedFilial(user.id_filial);
+          } else {
+            setSelectedFilial(data[0].id_filial);
+          }
+        } else if (data.length > 0) {
+          setSelectedFilial(data[0].id_filial);
+        }
+      } else {
+        console.error("Erro ao carregar filiais");
+      }
+    } catch (error) {
+      console.error("Erro ao carregar filiais:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const carregarEstatisticas = async (idFilial: number) => {
+    try {
+      setLoadingStats(true);
+      console.log("Carregando estatísticas para filial:", idFilial);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/alunos/estatisticas/${idFilial}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Estatísticas carregadas:", data);
+        setEstatisticas(data);
+      } else {
+        console.error("Erro ao carregar estatísticas");
+      }
+    } catch (error) {
+      console.error("Erro ao carregar estatísticas:", error);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
 
   const toggleMonth = (month: string) => {
     setSelectedMonths((prev) => {
@@ -115,7 +176,7 @@ export default function DashboardPage() {
     });
   };
 
-  const filteredData = cashFlow.filter((item: any) =>
+  const filteredData = cashFlowMockData.filter((item) =>
     selectedMonths.includes(item.month)
   );
 
@@ -128,19 +189,37 @@ export default function DashboardPage() {
         </label>
         <select
           id="filial-select"
-          value={selectedFilial}
+          value={selectedFilial || ""}
           onChange={(e) => {
-            setSelectedFilial(e.target.value as FilialKey);
-            setSelectedMonths(["Agosto"]);
+            const value = e.target.value;
+            console.log("Filial selecionada:", value);
+            if (value) {
+              const filialId = Number(value);
+              setSelectedFilial(filialId);
+              setSelectedMonths(["Agosto"]);
+            }
           }}
-          className="border rounded px-3 py-2 text-gray-700 bg-white"
+          className="border rounded px-3 py-2 text-gray-700 bg-white min-w-[200px] cursor-pointer"
+          disabled={loading || filiais.length === 0}
         >
-          {filiais.map((filial) => (
-            <option key={filial} value={filial}>
-              {filial}
-            </option>
-          ))}
+          {loading ? (
+            <option value="">Carregando...</option>
+          ) : filiais.length === 0 ? (
+            <option value="">Nenhuma filial encontrada</option>
+          ) : (
+            <>
+              <option value="">Selecione uma filial</option>
+              {filiais.map((filial) => (
+                <option key={filial.id_filial} value={filial.id_filial}>
+                  {filial.nome_filial}
+                </option>
+              ))}
+            </>
+          )}
         </select>
+        {loading && (
+          <span className="text-sm text-gray-500">Carregando filiais...</span>
+        )}
       </div>
 
       {/* Cards principais */}
@@ -150,20 +229,24 @@ export default function DashboardPage() {
             Alunos Cadastrados
           </h2>
           <p className="mt-2 text-3xl font-bold">
-            {cadastrados.toLocaleString()}
+            {loadingStats ? "..." : estatisticas.cadastrados.toLocaleString()}
           </p>
           <p className="text-sm text-gray-500">Alunos Cadastrados</p>
         </div>
         <div className="bg-green-100 text-green-800 shadow rounded-lg p-4">
           <h2 className="text-lg font-semibold text-gray-700">Alunos Ativos</h2>
-          <p className="mt-2 text-3xl font-bold">{ativos.toLocaleString()}</p>
+          <p className="mt-2 text-3xl font-bold">
+            {loadingStats ? "..." : estatisticas.ativos.toLocaleString()}
+          </p>
           <p className="text-sm text-gray-500">Alunos Ativos</p>
         </div>
         <div className="bg-green-100 text-green-800 shadow rounded-lg p-4">
           <h2 className="text-lg font-semibold text-gray-700">
             Alunos Inativos
           </h2>
-          <p className="mt-2 text-3xl font-bold">{inativos.toLocaleString()}</p>
+          <p className="mt-2 text-3xl font-bold">
+            {loadingStats ? "..." : estatisticas.inativos.toLocaleString()}
+          </p>
           <p className="text-sm text-gray-500">Alunos Inativos</p>
         </div>
         <div className="bg-green-100 text-green-800 shadow rounded-lg p-4">
@@ -171,7 +254,7 @@ export default function DashboardPage() {
             Pagamentos Inadimplentes
           </h2>
           <p className="mt-2 text-3xl font-bold">
-            {inadimplentes.toLocaleString()}
+            {loadingStats ? "..." : estatisticas.inadimplentes.toLocaleString()}
           </p>
           <p className="text-sm text-gray-500">Pagamentos Inadimplentes</p>
         </div>
@@ -183,7 +266,7 @@ export default function DashboardPage() {
           Selecionar até 4 meses:
         </h2>
         <div className="flex flex-wrap gap-2">
-          {cashFlow.map((item: any) => (
+          {cashFlowMockData.map((item) => (
             <button
               key={item.month}
               className={`px-4 py-2 rounded-full border ${
@@ -202,7 +285,7 @@ export default function DashboardPage() {
       {/* Gráfico de fluxo de caixa */}
       <div className="bg-white shadow rounded-lg p-4">
         <h2 className="text-lg font-semibold text-gray-700 mb-4">
-          Fluxo de Caixa
+          Fluxo de Caixa (Dados Simulados)
         </h2>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={filteredData}>

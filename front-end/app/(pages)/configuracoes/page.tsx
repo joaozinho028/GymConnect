@@ -1,5 +1,6 @@
 "use client";
 
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   ChevronDown,
   ChevronUp,
@@ -27,9 +28,11 @@ type MenuItem = {
   icon: React.FC<React.SVGProps<SVGSVGElement>>;
   component?: React.FC<any>;
   submenu?: MenuItem[];
+  permission?: string; // Nova propriedade para controle de permissão
 };
 
 export default function FormEditaPerfil() {
+  const permissions = usePermissions();
   const [isDesktop, setIsDesktop] = useState(true);
   useEffect(() => {
     const check = () => setIsDesktop(window.innerWidth >= 1024);
@@ -37,36 +40,42 @@ export default function FormEditaPerfil() {
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
-  // Menu estático (não modificado)
+  // Menu com controle de permissões
   const menus: MenuItem[] = [
     {
       name: "Meu Perfil",
       icon: Layers,
       component: ProfilePage,
+      // Meu Perfil sempre visível (sem restrição)
     },
     {
       name: "Informações Bancárias",
       icon: CreditCard,
       component: DadosBancarios,
+      permission: "informacoes_bancarias",
     },
     // {
     //   name: "Plano Gym Connect",
     //   icon: Layers,
     //   component: PlanoGymConnect, // comentado temporariamente
+    //   permission: "plano_gym_connect",
     // },
     // {
     //   name: "Configurações Aplicativo", // comentado temporariamente
     //   icon: Smartphone,
     //   component: ConfiguracoesApp,
+    //   permission: "configuracoes_app",
     // },
     {
       name: "Histórico de Usuários",
       icon: UserMinus2,
       component: HistorioUsuario,
+      permission: "historico_usuario",
     },
     {
       name: "Usuários",
       icon: Users,
+      permission: "usuarios",
       submenu: [
         {
           name: "Cadastrar Usuário",
@@ -83,6 +92,7 @@ export default function FormEditaPerfil() {
     {
       name: "Perfil",
       icon: FileText,
+      permission: "perfis",
       submenu: [
         {
           name: "Cadastro de Perfil",
@@ -98,12 +108,36 @@ export default function FormEditaPerfil() {
     },
   ];
 
+  // Função para verificar se um menu deve ser visível baseado nas permissões
+  const hasPermission = (permission?: string): boolean => {
+    if (!permission) return true; // Se não tem permissão definida, sempre visível
+    return (
+      permissions.configuracoes?.[
+        permission as keyof typeof permissions.configuracoes
+      ] || false
+    );
+  };
+
+  // Filtra os menus baseado nas permissões
+  const filteredMenus = menus.filter((menu) => hasPermission(menu.permission));
+
   // Estado para controlar qual menu e submenu está selecionado
   // Aqui guardamos índices: menuIndex e submenuIndex (opcional)
   const [selectedMenuIndex, setSelectedMenuIndex] = useState(0);
   const [selectedSubmenuIndex, setSelectedSubmenuIndex] = useState<
     number | null
   >(null);
+
+  // Ajusta o índice selecionado se não houver menus filtrados ou se o índice está fora dos limites
+  useEffect(() => {
+    if (filteredMenus.length === 0) {
+      setSelectedMenuIndex(0);
+      setSelectedSubmenuIndex(null);
+    } else if (selectedMenuIndex >= filteredMenus.length) {
+      setSelectedMenuIndex(0);
+      setSelectedSubmenuIndex(null);
+    }
+  }, [filteredMenus.length, selectedMenuIndex]);
 
   // Estado para dropdowns abertos
   const [openDropdowns, setOpenDropdowns] = useState<{
@@ -132,14 +166,15 @@ export default function FormEditaPerfil() {
   // Descobre qual componente deve ser renderizado
   let SelectedComponent: React.FC<any> | null = null;
   if (
-    menus[selectedMenuIndex].submenu &&
+    filteredMenus[selectedMenuIndex]?.submenu &&
     selectedSubmenuIndex !== null &&
-    menus[selectedMenuIndex].submenu![selectedSubmenuIndex].component
+    filteredMenus[selectedMenuIndex].submenu![selectedSubmenuIndex].component
   ) {
     SelectedComponent =
-      menus[selectedMenuIndex].submenu![selectedSubmenuIndex].component!;
-  } else if (menus[selectedMenuIndex].component) {
-    SelectedComponent = menus[selectedMenuIndex].component!;
+      filteredMenus[selectedMenuIndex].submenu![selectedSubmenuIndex]
+        .component!;
+  } else if (filteredMenus[selectedMenuIndex]?.component) {
+    SelectedComponent = filteredMenus[selectedMenuIndex].component!;
   }
 
   if (!isDesktop) {
@@ -170,8 +205,8 @@ export default function FormEditaPerfil() {
           Selecione uma opção abaixo para editar as configurações do sistema.
         </p>
         <ul className="space-y-2 text-sm">
-          {/* ...existing code... */}
-          {menus.map((menu, i) => {
+          {/* Renderiza apenas menus com permissão */}
+          {filteredMenus.map((menu, i) => {
             const Icon = menu.icon;
             const isDropdownOpen = openDropdowns[menu.name] || false;
             const isMenuSelected =
@@ -254,7 +289,20 @@ export default function FormEditaPerfil() {
         </ul>
       </nav>
       <section className="flex-1 p-5 overflow-auto bg-white dark:bg-gray-800 h-full">
-        {SelectedComponent ? (
+        {filteredMenus.length === 0 ? (
+          <div className="flex items-center justify-center min-h-[60vh] text-center p-6">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 max-w-md w-full">
+              <Settings2 className="w-10 h-10 mx-auto mb-4 text-gray-500" />
+              <h2 className="text-lg font-semibold mb-2">Acesso Restrito</h2>
+              <p className="text-gray-600 dark:text-gray-300">
+                Você não possui permissões para acessar as configurações do
+                sistema.
+                <br />
+                Entre em contato com o administrador para obter acesso.
+              </p>
+            </div>
+          </div>
+        ) : SelectedComponent ? (
           <SelectedComponent />
         ) : (
           <div>Selecione um menu</div>

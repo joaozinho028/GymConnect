@@ -64,7 +64,7 @@ const cadastrarPerfil = async (req, res) => {
   }
 };
 
-const listarPerfis = async (req, res) => {
+const consultarPerfis = async (req, res) => {
   try {
     const { id_empresa } = req.user;
     const { id_filial, id_perfil } = req.query;
@@ -202,4 +202,4 @@ const alterarStatusPerfil = async (req, res) => {
   }
 };
 
-module.exports = { cadastrarPerfil, listarPerfis, alterarStatusPerfil };
+module.exports = { cadastrarPerfil, consultarPerfis, alterarStatusPerfil };

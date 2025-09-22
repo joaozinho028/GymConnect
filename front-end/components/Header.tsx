@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   BarChart2,
   Building2,
@@ -38,10 +39,12 @@ interface HeaderProps {
 
 const Header: FC<HeaderProps> = () => {
   const { logout, token } = useAuth();
+  const permissions = usePermissions();
   const [userData, setUserData] = useState<any>(null);
   const [empresaData, setEmpresaData] = useState<any>(null);
   const [filialData, setFilialData] = useState<any>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
   useEffect(() => {
     async function fetchProfile() {
       if (!token) return;
@@ -86,71 +89,78 @@ const Header: FC<HeaderProps> = () => {
           Dashboard
         </Link>
 
-        {/* Dropdown Filiais */}
-        <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-1 cursor-pointer focus:outline-none">
-            <Building2 size={16} />
-            Filiais
-            <ChevronDown size={14} className="ml-1" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-white text-black rounded shadow-md mt-2">
-            <DropdownMenuItem asChild>
-              <Link
-                href="/cadastroFiliais"
-                className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer"
-              >
-                <PlusCircle size={14} />
-                Cadastro de Filiais
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link
-                href="/consultaFiliais"
-                className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer"
-              >
-                <Search size={14} />
-                Consulta de Filiais
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Dropdown Filiais - Só aparece se tiver permissão */}
+        {permissions.filiais && (
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center gap-1 cursor-pointer focus:outline-none">
+              <Building2 size={16} />
+              Filiais
+              <ChevronDown size={14} className="ml-1" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-white text-black rounded shadow-md mt-2">
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/cadastroFiliais"
+                  className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer"
+                >
+                  <PlusCircle size={14} />
+                  Cadastro de Filiais
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/consultaFiliais"
+                  className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer"
+                >
+                  <Search size={14} />
+                  Consulta de Filiais
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
-        {/* Dropdown Alunos */}
-        <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-1 cursor-pointer focus:outline-none">
-            <GraduationCap size={16} />
-            Alunos
-            <ChevronDown size={14} className="ml-1" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-white text-black rounded shadow-md mt-2">
-            <DropdownMenuItem asChild>
-              <Link
-                href="/cadastroAlunos"
-                className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer"
-              >
-                <PlusCircle size={14} />
-                Cadastro de Alunos
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link
-                href="/consultaAlunos"
-                className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer"
-              >
-                <Search size={14} />
-                Consulta de Alunos
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Dropdown Alunos - Só aparece se tiver permissão */}
+        {permissions.alunos && (
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center gap-1 cursor-pointer focus:outline-none">
+              <GraduationCap size={16} />
+              Alunos
+              <ChevronDown size={14} className="ml-1" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-white text-black rounded shadow-md mt-2">
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/cadastroAlunos"
+                  className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer"
+                >
+                  <PlusCircle size={14} />
+                  Cadastro de Alunos
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/consultaAlunos"
+                  className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer"
+                >
+                  <Search size={14} />
+                  Consulta de Alunos
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
-        <Link
-          href="fluxoCaixa"
-          className="flex items-center gap-2 hover:underline cursor-pointer"
-        >
-          <BarChart2 size={16} />
-          Fluxo de Caixa
-        </Link>
+        {/* Fluxo de Caixa - Só aparece se tiver permissão */}
+        {permissions.fluxo_caixa && (
+          <Link
+            href="fluxoCaixa"
+            className="flex items-center gap-2 hover:underline cursor-pointer"
+          >
+            <BarChart2 size={16} />
+            Fluxo de Caixa
+          </Link>
+        )}
 
         <Link
           href="/configuracoes"
@@ -234,55 +244,67 @@ const Header: FC<HeaderProps> = () => {
             >
               <LayoutDashboard size={18} /> Dashboard
             </Link>
-            <div>
-              <span className="text-xs text-gray-500 font-semibold">
-                Filiais
-              </span>
-              <div className="flex flex-col ml-2">
-                <Link
-                  href="/cadastroFiliais"
-                  className="flex items-center gap-2 py-1 text-black hover:underline"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <PlusCircle size={16} /> Cadastro de Filiais
-                </Link>
-                <Link
-                  href="/consultaFiliais"
-                  className="flex items-center gap-2 py-1 text-black hover:underline"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <Search size={16} /> Consulta de Filiais
-                </Link>
+
+            {/* Filiais - Mobile - Só aparece se tiver permissão */}
+            {permissions.filiais && (
+              <div>
+                <span className="text-xs text-gray-500 font-semibold">
+                  Filiais
+                </span>
+                <div className="flex flex-col ml-2">
+                  <Link
+                    href="/cadastroFiliais"
+                    className="flex items-center gap-2 py-1 text-black hover:underline"
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <PlusCircle size={16} /> Cadastro de Filiais
+                  </Link>
+                  <Link
+                    href="/consultaFiliais"
+                    className="flex items-center gap-2 py-1 text-black hover:underline"
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <Search size={16} /> Consulta de Filiais
+                  </Link>
+                </div>
               </div>
-            </div>
-            <div>
-              <span className="text-xs text-gray-500 font-semibold">
-                Alunos
-              </span>
-              <div className="flex flex-col ml-2">
-                <Link
-                  href="/cadastroAlunos"
-                  className="flex items-center gap-2 py-1 text-black hover:underline"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <PlusCircle size={16} /> Cadastro de Alunos
-                </Link>
-                <Link
-                  href="/consultaAlunos"
-                  className="flex items-center gap-2 py-1 text-black hover:underline"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <Search size={16} /> Consulta de Alunos
-                </Link>
+            )}
+
+            {/* Alunos - Mobile - Só aparece se tiver permissão */}
+            {permissions.alunos && (
+              <div>
+                <span className="text-xs text-gray-500 font-semibold">
+                  Alunos
+                </span>
+                <div className="flex flex-col ml-2">
+                  <Link
+                    href="/cadastroAlunos"
+                    className="flex items-center gap-2 py-1 text-black hover:underline"
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <PlusCircle size={16} /> Cadastro de Alunos
+                  </Link>
+                  <Link
+                    href="/consultaAlunos"
+                    className="flex items-center gap-2 py-1 text-black hover:underline"
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <Search size={16} /> Consulta de Alunos
+                  </Link>
+                </div>
               </div>
-            </div>
-            <Link
-              href="/fluxoCaixa"
-              className="flex items-center gap-2 py-2 text-black hover:underline"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <BarChart2 size={18} /> Fluxo de Caixa
-            </Link>
+            )}
+
+            {/* Fluxo de Caixa - Mobile - Só aparece se tiver permissão */}
+            {permissions.fluxo_caixa && (
+              <Link
+                href="/fluxoCaixa"
+                className="flex items-center gap-2 py-2 text-black hover:underline"
+                onClick={() => setSidebarOpen(false)}
+              >
+                <BarChart2 size={18} /> Fluxo de Caixa
+              </Link>
+            )}
             <Link
               href="/configuracoes"
               className="flex items-center gap-2 py-2 text-black hover:underline"

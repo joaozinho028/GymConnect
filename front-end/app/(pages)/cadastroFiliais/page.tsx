@@ -1,12 +1,15 @@
 "use client";
 import Button from "@/components/Forms/Button";
 import Input from "@/components/Forms/Input";
+import { useAuth } from "@/contexts/AuthContext";
 import { GetForm } from "@/utils";
 import { ChevronRight, Save } from "lucide-react";
 import { useState } from "react";
+import Swal from "sweetalert2";
 import * as yup from "yup";
 
 const CadastrarFilial = ({ ...rest }: any) => {
+  const { token } = useAuth();
   const [nome, setNome] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -18,21 +21,159 @@ const CadastrarFilial = ({ ...rest }: any) => {
   const [estado, setEstado] = useState("");
 
   const [yupSchema, setYupSchema] = useState(yup.object().shape({}));
-  const { handleSubmit, ...form } = GetForm(yupSchema, setYupSchema);
+  const { handleSubmit, setValue, ...form } = GetForm(yupSchema, setYupSchema);
+
+  // Incluir setValue no objeto form para os componentes Input
+  const formWithSetValue = { ...form, setValue };
+
+  // Funções de máscara personalizadas
+  const aplicarMascaraCNPJ = (valor: string) => {
+    return valor
+      .replace(/\D/g, "")
+      .replace(/(\d{2})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1/$2")
+      .replace(/(\d{4})(\d)/, "$1-$2")
+      .replace(/(-\d{2})\d+?$/, "$1");
+  };
+
+  const aplicarMascaraTelefone = (valor: string) => {
+    return valor
+      .replace(/\D/g, "")
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{4})(\d)/, "$1-$2")
+      .replace(/(\d{4})-(\d)(\d{4})/, "$1$2-$3")
+      .replace(/(-\d{4})\d+?$/, "$1");
+  };
+
+  const aplicarMascaraCEP = (valor: string) => {
+    return valor
+      .replace(/\D/g, "")
+      .replace(/(\d{5})(\d)/, "$1-$2")
+      .replace(/(-\d{3})\d+?$/, "$1");
+  };
+
+  // Função para buscar endereço por CEP
+  const buscarEnderecoPorCep = async (cepValue: string) => {
+    const cepLimpo = cepValue.replace(/\D/g, "");
+
+    if (cepLimpo.length === 8) {
+      try {
+        const response = await fetch(
+          `https://viacep.com.br/ws/${cepLimpo}/json/`
+        );
+        const data = await response.json();
+
+        if (!data.erro) {
+          setRua(data.logradouro || "");
+          setBairro(data.bairro || "");
+          setCidade(data.localidade || "");
+          setEstado(data.uf || "");
+
+          // Atualizar também o formulário para validação
+          setValue("rua", data.logradouro || "");
+          setValue("bairro", data.bairro || "");
+          setValue("cidade", data.localidade || "");
+          setValue("estado", data.uf || "");
+        } else {
+          Swal.fire({
+            icon: "warning",
+            title: "CEP não encontrado",
+            text: "O CEP informado não foi encontrado.",
+            timer: 2500,
+            showConfirmButton: false,
+            toast: true,
+            position: "top-end",
+          });
+        }
+      } catch (error) {
+        console.error("Erro ao buscar CEP:", error);
+      }
+    }
+  };
 
   const onSubmitFunction = async () => {
-    const filial = {
-      nome,
-      cnpj,
-      telefone,
-      cep,
-      rua,
-      numero,
-      bairro,
-      cidade,
-      estado,
-    };
-    console.log("Filial cadastrada:", filial);
+    console.log("Dados da filial:", {
+      nome_filial: nome,
+      cnpj_filial: cnpj,
+      telefone_filial: telefone,
+      cep_filial: cep,
+      rua_filial: rua,
+      numero_filial: numero,
+      bairro_filial: bairro,
+      cidade_filial: cidade,
+      estado_filial: estado,
+    });
+
+    try {
+      const body = {
+        nome_filial: nome,
+        cnpj_filial: cnpj,
+        telefone_filial: telefone,
+        cep_filial: cep,
+        rua_filial: rua,
+        numero_filial: numero,
+        bairro_filial: bairro,
+        cidade_filial: cidade,
+        estado_filial: estado,
+      };
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/empresas/cadastrar-filial`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(body),
+        }
+      );
+
+      const data = await res.json();
+
+      if (res.ok) {
+        Swal.fire({
+          icon: "success",
+          text: "Filial cadastrada com sucesso!",
+          timer: 2500,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+        });
+
+        // Limpar formulário após sucesso
+        setNome("");
+        setCnpj("");
+        setTelefone("");
+        setCep("");
+        setRua("");
+        setNumero("");
+        setBairro("");
+        setCidade("");
+        setEstado("");
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Erro!",
+          text: data?.message || "Erro ao cadastrar filial.",
+          timer: 2500,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+        });
+      }
+    } catch (err: any) {
+      Swal.fire({
+        icon: "error",
+        title: "Erro!",
+        text: err?.message || "Erro ao conectar ao servidor.",
+        timer: 2500,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end",
+      });
+    }
   };
 
   return (
@@ -57,7 +198,7 @@ const CadastrarFilial = ({ ...rest }: any) => {
               name="nome"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={nome}
               onChange={(e) => setNome(e.target.value)}
             />
@@ -66,10 +207,12 @@ const CadastrarFilial = ({ ...rest }: any) => {
               name="cnpj"
               required
               error="Preencha esse campo!"
-              mascara="cnpj"
-              formulario={form}
+              formulario={formWithSetValue}
               value={cnpj}
-              onChange={(e) => setCnpj(e.target.value)}
+              onChange={(e) => {
+                const valorComMascara = aplicarMascaraCNPJ(e.target.value);
+                setCnpj(valorComMascara);
+              }}
             />
           </div>
 
@@ -79,20 +222,25 @@ const CadastrarFilial = ({ ...rest }: any) => {
               name="telefone"
               required
               error="Preencha esse campo!"
-              mascara="telefone"
-              formulario={form}
+              formulario={formWithSetValue}
               value={telefone}
-              onChange={(e) => setTelefone(e.target.value)}
+              onChange={(e) => {
+                const valorComMascara = aplicarMascaraTelefone(e.target.value);
+                setTelefone(valorComMascara);
+              }}
             />
             <Input
               label="CEP"
               name="cep"
               required
               error="Preencha esse campo!"
-              mascara="cep"
-              formulario={form}
+              formulario={formWithSetValue}
               value={cep}
-              onChange={(e) => setCep(e.target.value)}
+              onChange={(e) => {
+                const valorComMascara = aplicarMascaraCEP(e.target.value);
+                setCep(valorComMascara);
+                buscarEnderecoPorCep(valorComMascara);
+              }}
             />
           </div>
 
@@ -102,7 +250,7 @@ const CadastrarFilial = ({ ...rest }: any) => {
               name="rua"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={rua}
               onChange={(e) => setRua(e.target.value)}
             />
@@ -111,9 +259,13 @@ const CadastrarFilial = ({ ...rest }: any) => {
               name="numero"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={numero}
-              onChange={(e) => setNumero(e.target.value)}
+              onChange={(e) => {
+                // Permitir apenas números
+                const valorLimpo = e.target.value.replace(/\D/g, "");
+                setNumero(valorLimpo);
+              }}
             />
           </div>
 
@@ -123,7 +275,7 @@ const CadastrarFilial = ({ ...rest }: any) => {
               name="bairro"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={bairro}
               onChange={(e) => setBairro(e.target.value)}
             />
@@ -132,7 +284,7 @@ const CadastrarFilial = ({ ...rest }: any) => {
               name="cidade"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={cidade}
               onChange={(e) => setCidade(e.target.value)}
             />
@@ -141,7 +293,7 @@ const CadastrarFilial = ({ ...rest }: any) => {
               name="estado"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={estado}
               onChange={(e) => setEstado(e.target.value)}
             />
