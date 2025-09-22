@@ -1,10 +1,18 @@
 "use client";
 
+import Button from "@/components/Forms/Button";
 import Input from "@/components/Forms/Input";
 import InputSelectComponent from "@/components/Forms/InputSelect";
+import { useAuth } from "@/contexts/AuthContext";
 import { GetForm } from "@/utils";
-import { Copy, FileDown, FileSpreadsheet, FileText } from "lucide-react";
-import { useState } from "react";
+import {
+  Copy,
+  FileDown,
+  FileSpreadsheet,
+  FileText,
+  Search,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import * as yup from "yup";
 
 // Mock de logs do sistema
@@ -136,20 +144,8 @@ const HistoricoUsuario = ({ ...rest }: any) => {
   });
 
   const { handleSubmit, ...form } = GetForm(yupSchema);
-
-  const opcaoFilial = [
-    { value: "1", label: "Filial 1" },
-    { value: "2", label: "Filial 2" },
-  ];
-
-  const opcaoTipo = [
-    { value: "", label: "Todos os tipos" },
-    { value: "Filial", label: "Filial" },
-    { value: "Aluno", label: "Aluno" },
-    { value: "Usuário", label: "Usuário" },
-    { value: "Perfil", label: "Perfil" },
-    { value: "Configuração App", label: "Configuração App" },
-  ];
+  const [opcaoFilial, setOpcaoFilial] = useState([]);
+  const { token } = useAuth();
 
   // Filtra logs
   const logsFiltrados = logsMock.filter(
@@ -159,6 +155,30 @@ const HistoricoUsuario = ({ ...rest }: any) => {
       (!usuario || log.usuario.toLowerCase().includes(usuario.toLowerCase()))
   );
 
+  useEffect(() => {
+    async function fetchBuscaFiliais() {
+      try {
+        const resFilial = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/empresas/listar-filiais`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        if (resFilial.ok) {
+          const dataFilial = await resFilial.json();
+          setOpcaoFilial(
+            (dataFilial || []).map((f: any) => ({
+              value: f.id_filial ?? f.id,
+              label: f.nome_filial ?? f.nome,
+            }))
+          );
+        }
+      } catch (err) {
+        // Silenciar erro, pode exibir alerta se desejar
+      }
+    }
+    fetchBuscaFiliais();
+  }, []);
   return (
     <div className="p-4 max-w-7xl mx-auto space-y-8">
       <h1 className="text-2xl font-semibold">Histórico do Sistema</h1>
@@ -175,16 +195,6 @@ const HistoricoUsuario = ({ ...rest }: any) => {
           options={opcaoFilial}
           width="w-full"
         />
-        <InputSelectComponent
-          label="Tipo de Ação"
-          name="tipo"
-          required={false}
-          formulario={form}
-          value={tipo}
-          onChange={(e) => setTipo(e.target.value)}
-          options={opcaoTipo}
-          width="w-full"
-        />
 
         <Input
           label="Nome do Usuario"
@@ -194,15 +204,16 @@ const HistoricoUsuario = ({ ...rest }: any) => {
           value={usuario}
           onChange={(e) => setUsuario(e.target.value)}
           width="w-full"
-          placeholder="Ex.: Supervisor"
+          placeholder="Ex.: João Paulo"
         />
-        {/* <input
-          type="text"
-          placeholder="Pesquisar por usuário"
-          value={usuario}
-          onChange={(e) => setUsuario(e.target.value)}
-          className="w-full h-[42px] p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-        /> */}
+
+        <Button
+          className="p-2 w-full h-[38px] mt-7 bg-green-600 cursor-pointer hover:bg-green-700 text-white hover:text-white"
+          type="submit"
+        >
+          <Search size={18} className="inline-block mr-2" />
+          Buscar
+        </Button>
       </div>
 
       {/* Botões de exportação */}
@@ -241,19 +252,17 @@ const HistoricoUsuario = ({ ...rest }: any) => {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                Data
-              </th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                 Usuário
               </th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                Tipo
-              </th>
+
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                 Ação
               </th>
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                 Filial
+              </th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                Data
               </th>
             </tr>
           </thead>
@@ -267,11 +276,10 @@ const HistoricoUsuario = ({ ...rest }: any) => {
             ) : (
               logsFiltrados.map((log) => (
                 <tr key={log.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-2">{log.data}</td>
                   <td className="px-4 py-2">{log.usuario}</td>
-                  <td className="px-4 py-2">{log.tipo}</td>
                   <td className="px-4 py-2">{log.acao}</td>
                   <td className="px-4 py-2">{`Filial ${log.filial}`}</td>
+                  <td className="px-4 py-2">{log.data}</td>
                 </tr>
               ))
             )}
