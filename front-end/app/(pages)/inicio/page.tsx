@@ -1,5 +1,6 @@
 "use client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -44,6 +45,7 @@ const cashFlowMockData: CashFlowItem[] = [
 
 export default function DashboardPage() {
   const { isAuthenticated, token, user } = useAuth();
+  const { isAdmin, loading: adminLoading } = useIsAdmin();
   const router = useRouter();
 
   // Estados para dados reais
@@ -56,9 +58,7 @@ export default function DashboardPage() {
     inadimplentes: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [loadingStats, setLoadingStats] = useState(false);
-
-  // Estados para o gráfico (dados mockados)
+  const [loadingStats, setLoadingStats] = useState(false); // Estados para o gráfico (dados mockados)
   const [selectedMonths, setSelectedMonths] = useState<string[]>(["Agosto"]);
 
   useEffect(() => {
@@ -67,7 +67,7 @@ export default function DashboardPage() {
     }
   }, [isAuthenticated, router]);
 
-  // Carregar filiais quando o componente montar
+  // Carregar filiais quando o componente montar (apenas para administradores)
   useEffect(() => {
     console.log(
       "useEffect carregarFiliais - isAuthenticated:",
@@ -75,12 +75,22 @@ export default function DashboardPage() {
       "token:",
       !!token,
       "user:",
-      !!user
+      !!user,
+      "isAdmin:",
+      isAdmin,
+      "adminLoading:",
+      adminLoading
     );
-    if (isAuthenticated && token && user) {
-      carregarFiliais();
+    if (isAuthenticated && token && user && !adminLoading) {
+      if (isAdmin) {
+        carregarFiliais();
+      } else {
+        // Se não for admin, usar apenas a filial do usuário
+        setSelectedFilial(user.id_filial);
+        setLoading(false);
+      }
     }
-  }, [isAuthenticated, token, user]);
+  }, [isAuthenticated, token, user, isAdmin, adminLoading]);
 
   // Carregar estatísticas quando a filial for selecionada
   useEffect(() => {
@@ -182,45 +192,57 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4 max-w-7xl mx-auto space-y-8">
-      {/* Select de filial */}
-      <div className="mb-6 flex items-center gap-4">
-        <label className="font-medium text-gray-700" htmlFor="filial-select">
-          Filial:
-        </label>
-        <select
-          id="filial-select"
-          value={selectedFilial || ""}
-          onChange={(e) => {
-            const value = e.target.value;
-            console.log("Filial selecionada:", value);
-            if (value) {
-              const filialId = Number(value);
-              setSelectedFilial(filialId);
-              setSelectedMonths(["Agosto"]);
-            }
-          }}
-          className="border rounded px-3 py-2 text-gray-700 bg-white min-w-[200px] cursor-pointer"
-          disabled={loading || filiais.length === 0}
-        >
-          {loading ? (
-            <option value="">Carregando...</option>
-          ) : filiais.length === 0 ? (
-            <option value="">Nenhuma filial encontrada</option>
-          ) : (
-            <>
-              <option value="">Selecione uma filial</option>
-              {filiais.map((filial) => (
-                <option key={filial.id_filial} value={filial.id_filial}>
-                  {filial.nome_filial}
-                </option>
-              ))}
-            </>
+      {/* Loading de verificação de permissões */}
+      {adminLoading && (
+        <div className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto mb-2"></div>
+            <p className="text-gray-600">Verificando permissões...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Select de filial - apenas para administrador */}
+      {!adminLoading && isAdmin && (
+        <div className="mb-6 flex items-center gap-4">
+          <label className="font-medium text-gray-700" htmlFor="filial-select">
+            Filial:
+          </label>
+          <select
+            id="filial-select"
+            value={selectedFilial || ""}
+            onChange={(e) => {
+              const value = e.target.value;
+              console.log("Filial selecionada:", value);
+              if (value) {
+                const filialId = Number(value);
+                setSelectedFilial(filialId);
+                setSelectedMonths(["Agosto"]);
+              }
+            }}
+            className="border rounded px-3 py-2 text-gray-700 bg-white min-w-[200px] cursor-pointer"
+            disabled={loading || filiais.length === 0}
+          >
+            {loading ? (
+              <option value="">Carregando...</option>
+            ) : filiais.length === 0 ? (
+              <option value="">Nenhuma filial encontrada</option>
+            ) : (
+              <>
+                <option value="">Selecione uma filial</option>
+                {filiais.map((filial) => (
+                  <option key={filial.id_filial} value={filial.id_filial}>
+                    {filial.nome_filial}
+                  </option>
+                ))}
+              </>
+            )}
+          </select>
+          {loading && (
+            <span className="text-sm text-gray-500">Carregando filiais...</span>
           )}
-        </select>
-        {loading && (
-          <span className="text-sm text-gray-500">Carregando filiais...</span>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Cards principais */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -260,44 +282,48 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Seletor de meses */}
-      <div className="bg-white shadow rounded-lg p-4">
-        <h2 className="text-lg font-semibold text-gray-700 mb-2">
-          Selecionar até 4 meses:
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {cashFlowMockData.map((item) => (
-            <button
-              key={item.month}
-              className={`px-4 py-2 rounded-full border ${
-                selectedMonths.includes(item.month)
-                  ? "bg-green-500 text-white"
-                  : "bg-gray-100 text-gray-800"
-              }`}
-              onClick={() => toggleMonth(item.month)}
-            >
-              {item.month}
-            </button>
-          ))}
+      {/* Seletor de meses - apenas para administrador */}
+      {!adminLoading && isAdmin && (
+        <div className="bg-white shadow rounded-lg p-4">
+          <h2 className="text-lg font-semibold text-gray-700 mb-2">
+            Selecionar até 4 meses:
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {cashFlowMockData.map((item) => (
+              <button
+                key={item.month}
+                className={`px-4 py-2 rounded-full border ${
+                  selectedMonths.includes(item.month)
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-100 text-gray-800"
+                }`}
+                onClick={() => toggleMonth(item.month)}
+              >
+                {item.month}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Gráfico de fluxo de caixa */}
-      <div className="bg-white shadow rounded-lg p-4">
-        <h2 className="text-lg font-semibold text-gray-700 mb-4">
-          Fluxo de Caixa (Dados Simulados)
-        </h2>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={filteredData}>
-            <XAxis dataKey="month" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="entrada" fill="#4ade80" name="Entradas" />
-            <Bar dataKey="saida" fill="#f87171" name="Saídas" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      {/* Gráfico de fluxo de caixa - apenas para administrador */}
+      {!adminLoading && isAdmin && (
+        <div className="bg-white shadow rounded-lg p-4">
+          <h2 className="text-lg font-semibold text-gray-700 mb-4">
+            Fluxo de Caixa (Dados Simulados)
+          </h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={filteredData}>
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="entrada" fill="#4ade80" name="Entradas" />
+              <Bar dataKey="saida" fill="#f87171" name="Saídas" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }
