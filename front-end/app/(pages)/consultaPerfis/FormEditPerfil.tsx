@@ -15,7 +15,6 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
   const [opcoesFilial, setOpcoesFilial] = useState<any[]>([]);
   const schema = yup.object().shape({
     nome: yup.string().required("Preencha o nome!"),
-    perfil: yup.string().required("Selecione o perfil!"),
     filial: yup.string().required("Selecione a filial!"),
   });
 
@@ -60,10 +59,7 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
     if (perfil) {
       reset({
         nome: perfil.nome || "",
-        email: perfil.email || "",
-        perfil: perfil.id_perfil ? perfil.id_perfil.toString() : "",
         filial: perfil.id_filial ? perfil.id_filial.toString() : "",
-        status: perfil.status_perfil ? "ativo" : "inativo",
       });
 
       // Carregar permissões do perfil selecionado
@@ -211,12 +207,49 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
         });
 
         if (onSave) {
+          // Formatar permissões para exibição na tabela
+          const permissoesFormatadas = [];
+
+          if (modulos.alunos) permissoesFormatadas.push("Módulo Alunos");
+          if (modulos.filiais) permissoesFormatadas.push("Módulo Filiais");
+          if (modulos.fluxo_caixa)
+            permissoesFormatadas.push("Módulo Fluxo De Caixa");
+          if (modulos.importacao)
+            permissoesFormatadas.push("Módulo Importação");
+          if (modulos.exportacao)
+            permissoesFormatadas.push("Módulo Exportação");
+
+          if (modulos.configuracoes) {
+            const subPermissoes = [];
+            if (subConfig.informacoes_bancarias)
+              subPermissoes.push("Informações Bancárias");
+            if (subConfig.plano_gym_connect)
+              subPermissoes.push("Plano Gym Connect");
+            if (subConfig.configuracoes_app)
+              subPermissoes.push("Configurações Aplicativo");
+            if (subConfig.historico_usuario)
+              subPermissoes.push("Histórico De Usuário");
+            if (subConfig.usuarios) subPermissoes.push("Usuários");
+            if (subConfig.perfis) subPermissoes.push("Perfis");
+
+            if (subPermissoes.length > 0) {
+              permissoesFormatadas.push(
+                `Módulo Configurações (${subPermissoes.join(", ")})`
+              );
+            }
+          }
+
+          // Buscar nome da filial selecionada
+          const filialSelecionada = opcoesFilial.find(
+            (f) => f.value.toString() === values.filial
+          );
+
           onSave({
             ...perfil,
+            id: perfil.id,
             nome: values.nome,
-            email: values.email,
-            id_perfil: values.perfil,
-            id_filial: values.filial,
+            permissoes: permissoesFormatadas,
+            filial: filialSelecionada?.label || perfil.filial || "",
             updated_at: new Date().toISOString(),
           });
         }
@@ -245,11 +278,7 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
   return (
     <div className="p-4 w-full space-y-8">
       <div className="w-full bg-white p-6 rounded-lg sm:p-10">
-        <form
-          onSubmit={handleSubmit(onSubmitFunction)}
-          {...rest}
-          className="space-y-4 w-full"
-        >
+        <form {...rest} className="space-y-4 w-full">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Nome" name="nome" formulario={form} width="w-full" />
 
@@ -322,7 +351,8 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
           <div className="grid grid-cols-1 sm:flex sm:justify-end sm:space-x-4 gap-2 sm:pt-4">
             <Button
               className="p-2 w-full sm:w-[150px] bg-green-600 cursor-pointer hover:bg-green-700 text-white hover:text-white"
-              type="submit"
+              type="button"
+              onClick={handleSubmit(onSubmitFunction)}
             >
               <Save size={18} className="inline-block mr-2" />
               Salvar

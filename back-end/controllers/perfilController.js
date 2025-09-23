@@ -179,7 +179,7 @@ const consultarPerfis = async (req, res) => {
     let query = supabase
       .from("perfis")
       .select(
-        `id_perfil, nome_perfil, permissoes_perfil, status_perfil, filiais(nome_filial), created_at`
+        `id_perfil, nome_perfil, permissoes_perfil, status_perfil, id_filial, filiais(nome_filial), created_at`
       )
       .eq("id_empresa", id_empresa);
     if (id_filial) {
@@ -235,6 +235,7 @@ const consultarPerfis = async (req, res) => {
       nome: perfil.nome_perfil,
       permissoes: parsePermissoes(perfil.permissoes_perfil),
       status: perfil.status_perfil,
+      id_filial: perfil.id_filial,
       filial: perfil.filiais?.nome_filial || "",
       criadoEm: perfil.created_at
         ? new Date(perfil.created_at).toLocaleString("pt-BR")

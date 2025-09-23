@@ -342,7 +342,7 @@ export default function ConsultaPerfis() {
                                     : u
                                 )
                               );
-                              ({
+                              Swal.fire({
                                 icon: "error",
                                 text:
                                   String(err) ||
@@ -418,7 +418,20 @@ export default function ConsultaPerfis() {
           opened={modalOpen}
           onClose={() => setModalOpen(false)}
         >
-          <EditarCadastroPerfil perfil={perfilSelecionado} />
+          <EditarCadastroPerfil
+            perfil={perfilSelecionado}
+            onSave={(perfilAtualizado: any) => {
+              // Atualizar o perfil na lista
+              setPerfis((prev) =>
+                prev.map((p) =>
+                  p.id === perfilAtualizado.id
+                    ? { ...p, ...perfilAtualizado }
+                    : p
+                )
+              );
+              setModalOpen(false);
+            }}
+          />
         </ModalComponente>
       </div>
     </div>
