@@ -1,5 +1,6 @@
 const supabase = require("../db");
 const bcrypt = require("bcrypt");
+const { registrarAuditoria } = require("./auditoriaController");
 
 const cadastrarUsuario = async (req, res) => {
   const { nome_usuario, email_usuario, senha_usuario, id_filial, id_perfil } =
@@ -44,6 +45,17 @@ const cadastrarUsuario = async (req, res) => {
         error,
       });
     }
+
+    // Registrar auditoria
+    console.log("🔍 Tentando registrar auditoria para cadastro de usuário...");
+    const auditoriaResult = await registrarAuditoria(
+      id_empresa,
+      req.user.id_usuario, // Usuário que fez o cadastro
+      id_filial,
+      "Cadastrou usuário",
+      `Cadastrou o usuário: ${nome_usuario} (${email_usuario})`
+    );
+    console.log("📝 Resultado da auditoria:", auditoriaResult);
 
     res.status(201).json({
       message: "Usuário cadastrado com sucesso!",
@@ -146,6 +158,18 @@ const alterarStatusUsuario = async (req, res) => {
         .status(404)
         .json({ message: "Usuário não encontrado ou não pertence à empresa." });
     }
+
+    // Registrar auditoria
+    const acao = status_usuario ? "Ativou usuário" : "Inativou usuário";
+    const usuarioAfetado = data[0];
+    await registrarAuditoria(
+      id_empresa,
+      req.user.id_usuario, // Usuário que fez a alteração
+      req.user.id_filial, // Filial do usuário que fez a alteração
+      acao,
+      `${acao}: ${usuarioAfetado.nome_usuario} (ID: ${usuarioAfetado.id_usuario})`
+    );
+
     res.json({ message: "Status atualizado com sucesso!", user: data[0] });
   } catch (err) {
     res
@@ -186,7 +210,7 @@ const editarUsuario = async (req, res) => {
     // Verificar se o usuário existe e pertence à empresa
     const { data: usuarioExistente, error: errorBusca } = await supabase
       .from("usuarios")
-      .select("id_usuario, email_usuario")
+      .select("id_usuario, nome_usuario, email_usuario, id_perfil, id_filial")
       .eq("id_usuario", id_usuario)
       .eq("id_empresa", id_empresa)
       .single();
@@ -238,6 +262,41 @@ const editarUsuario = async (req, res) => {
       return res.status(404).json({
         message: "Usuário não encontrado.",
       });
+    }
+
+    // Registrar auditoria - verificar quais campos foram alterados
+    const alteracoes = [];
+    if (nome_usuario !== usuarioExistente.nome_usuario) {
+      alteracoes.push(
+        `Nome: "${usuarioExistente.nome_usuario}" → "${nome_usuario}"`
+      );
+    }
+    if (email_usuario !== usuarioExistente.email_usuario) {
+      alteracoes.push(
+        `Email: "${usuarioExistente.email_usuario}" → "${email_usuario}"`
+      );
+    }
+    if (perfilId !== usuarioExistente.id_perfil) {
+      alteracoes.push(
+        `Perfil ID: "${usuarioExistente.id_perfil}" → "${perfilId}"`
+      );
+    }
+    if (filialId !== usuarioExistente.id_filial) {
+      alteracoes.push(
+        `Filial ID: "${usuarioExistente.id_filial}" → "${filialId}"`
+      );
+    }
+
+    if (alteracoes.length > 0) {
+      await registrarAuditoria(
+        id_empresa,
+        req.user.id_usuario, // Usuário que fez a edição
+        req.user.id_filial, // Filial do usuário que fez a edição
+        "Editou usuário",
+        `Editou o usuário: ${
+          usuarioExistente.nome_usuario
+        } (ID: ${id_usuario}). Alterações: ${alteracoes.join(", ")}`
+      );
     }
 
     res.json({
