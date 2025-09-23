@@ -1,4 +1,5 @@
 "use client";
+import ModalComponente from "@/components/Modal/ModalComponent";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   ChevronLeft,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
+import EditarCadastroPerfil from "./FormEditPerfil";
 
 // Exportar CSV
 function exportToCSV(data: any[]) {
@@ -340,7 +342,7 @@ export default function ConsultaPerfis() {
                                     : u
                                 )
                               );
-                              ({
+                              Swal.fire({
                                 icon: "error",
                                 text:
                                   String(err) ||
@@ -410,15 +412,27 @@ export default function ConsultaPerfis() {
         </div>
 
         {/* Modal de edição futuramente */}
-        {/* 
+
         <ModalComponente
           header="Editar Perfil"
           opened={modalOpen}
           onClose={() => setModalOpen(false)}
         >
-          <EditarPerfil perfil={perfilSelecionado} />
-        </ModalComponente> 
-        */}
+          <EditarCadastroPerfil
+            perfil={perfilSelecionado}
+            onSave={(perfilAtualizado: any) => {
+              // Atualizar o perfil na lista
+              setPerfis((prev) =>
+                prev.map((p) =>
+                  p.id === perfilAtualizado.id
+                    ? { ...p, ...perfilAtualizado }
+                    : p
+                )
+              );
+              setModalOpen(false);
+            }}
+          />
+        </ModalComponente>
       </div>
     </div>
   );

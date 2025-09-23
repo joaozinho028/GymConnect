@@ -210,7 +210,7 @@ const Header: FC<HeaderProps> = () => {
             <div className="space-y-2">
               <DropdownMenuItem
                 onClick={logout}
-                className="w-full text-sm text-red-600 hover:text-red-700"
+                className="w-full text-sm text-red-600 cursor-pointer hover:text-red-700"
               >
                 <LogOut size={16} className="mr-2" />
                 Sair
