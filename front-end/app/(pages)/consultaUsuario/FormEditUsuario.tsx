@@ -28,10 +28,10 @@ const EditarCadastroUsuario = ({ usuario, onSave, ...rest }: any) => {
   useEffect(() => {
     if (usuario) {
       reset({
-        nome: usuario.nome,
-        email: usuario.email,
-        perfil: usuario.id_perfil || "",
-        filial: usuario.id_filial || "",
+        nome: usuario.nome || "",
+        email: usuario.email || "",
+        perfil: usuario.id_perfil ? usuario.id_perfil.toString() : "",
+        filial: usuario.id_filial ? usuario.id_filial.toString() : "",
         status: usuario.status_usuario ? "ativo" : "inativo",
       });
     }
@@ -81,12 +81,18 @@ const EditarCadastroUsuario = ({ usuario, onSave, ...rest }: any) => {
         id_usuario: usuario.id,
         nome_usuario: values.nome,
         email_usuario: values.email,
-        id_perfil: values.perfil,
-        id_filial: values.filial,
-        status_usuario: values.status === "ativo",
+        id_perfil:
+          values.perfil && values.perfil !== ""
+            ? parseInt(values.perfil)
+            : usuario.id_perfil || null,
+        id_filial:
+          values.filial && values.filial !== ""
+            ? parseInt(values.filial)
+            : usuario.id_filial || null,
       };
+
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/usuarios/atualizar-usuario`,
+        `${process.env.NEXT_PUBLIC_API_URL}/usuarios/editar-usuario`,
         {
           method: "PUT",
           headers: {
@@ -96,9 +102,29 @@ const EditarCadastroUsuario = ({ usuario, onSave, ...rest }: any) => {
           body: JSON.stringify(body),
         }
       );
+
       const data = await res.json();
+
       if (res.ok) {
-        if (onSave) onSave({ ...usuario, ...body });
+        Swal.fire({
+          icon: "success",
+          text: data?.message || "Usuário atualizado com sucesso!",
+          timer: 2500,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+        });
+
+        if (onSave) {
+          onSave({
+            ...usuario,
+            nome: values.nome,
+            email: values.email,
+            id_perfil: values.perfil,
+            id_filial: values.filial,
+            updated_at: new Date().toISOString(),
+          });
+        }
       } else {
         Swal.fire({
           icon: "error",
@@ -130,30 +156,25 @@ const EditarCadastroUsuario = ({ usuario, onSave, ...rest }: any) => {
           className="space-y-4 w-full"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Nome"
-              name="nome"
-              required
-              error="Preencha esse campo!"
-              formulario={form}
-              width="w-full"
-            />
+            <Input label="Nome" name="nome" formulario={form} width="w-full" />
             <Input
               label="Email"
               name="email"
               type="email"
-              error="Preencha esse campo!"
-              required
               formulario={form}
               width="w-full"
             />
           </div>
+
+          <hr />
+          <div className="font-bold text-sm">
+            <p>Alterar Configurações</p>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <InputSelectComponent
               label="Perfil"
               name="perfil"
-              required
-              error="Selecione o perfil!"
               formulario={form}
               options={opcoesPerfil}
               width="w-full"
@@ -161,8 +182,6 @@ const EditarCadastroUsuario = ({ usuario, onSave, ...rest }: any) => {
             <InputSelectComponent
               label="Filial"
               name="filial"
-              required
-              error="Selecione a filial!"
               formulario={form}
               options={opcoesFilial}
               width="w-full"

@@ -60,6 +60,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+
+    // Limpar cache de permissões de administrador
+    const keys = Object.keys(localStorage);
+    keys.forEach((key) => {
+      if (key.startsWith("isAdmin_")) {
+        localStorage.removeItem(key);
+      }
+    });
+
     setToken(null);
     setUser(null);
     setIsAuthenticated(false);

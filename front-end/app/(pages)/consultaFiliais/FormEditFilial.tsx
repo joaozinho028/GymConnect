@@ -2,7 +2,7 @@
 import Button from "@/components/Forms/Button";
 import Input from "@/components/Forms/Input";
 import { GetForm } from "@/utils";
-import { Save } from "lucide-react";
+import { InfoIcon, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import * as yup from "yup";
 
@@ -183,7 +183,23 @@ const EditarFilial = ({ filialSelecionada }: any) => {
             />
           </div>
 
-          <div className="flex justify-end pt-4">
+          <div className="grid grid-cols-1 sm:flex sm:justify-end sm:space-x-4 gap-2 sm:pt-4">
+            <Button
+              className="p-2 w-full sm:w-[180px] bg-red-600 cursor-pointer hover:bg-red-700 text-white hover:text-white"
+              type="button"
+              onClick={() => {
+                // Aqui você pode implementar a confirmação e lógica para inativar o usuário
+                // Por exemplo, mostrar um modal de confirmação antes de inativar
+                if (
+                  window.confirm("Tem certeza que deseja inativar esta filial?")
+                ) {
+                  // Implementar chamada para API de inativação
+                }
+              }}
+            >
+              <InfoIcon size={18} className="inline-block mr-2" />
+              Inativar Filial
+            </Button>
             <Button
               className="p-2 w-full sm:w-[150px] bg-green-600 cursor-pointer hover:bg-green-700 text-white hover:text-white"
               type="submit"

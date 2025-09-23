@@ -10,71 +10,23 @@ import {
   FileText,
   Pencil,
   Search,
-  User,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import EditarCadastroAluno from "./FormEditAluno";
 
-const alunosMock = [
-  {
-    id: 1,
-    nome: "Lucas Silva",
-    dataCadastro: "10/01/2024 ás 10:30",
-    matricula: "20240101",
-    cadastradoPor: "admin",
-    tokenAcesso: "ABCD123",
-    status: "Ativo",
-    situacao: "Regular",
-  },
-  {
-    id: 2,
-    nome: "Maria Souza",
-    dataCadastro: "15/02/2024 ás 13:40",
-    matricula: "20240215",
-    tokenAcesso: "CXTR900",
-    cadastradoPor: "Marcos Pereira",
-    status: "Inativo",
-    situacao: "Inadimplente de pagamento",
-  },
-  {
-    id: 3,
-    nome: "João Lima",
-    dataCadastro: "20/03/2024 ás 09:20",
-    matricula: "20240320",
-    tokenAcesso: "JKL789",
-    cadastradoPor: "admin",
-    status: "Ativo",
-    situacao: "Cancelado",
-  },
-  {
-    id: 4,
-    nome: "Ana Paula",
-    dataCadastro: "05/04/2024 ás 14:10",
-    matricula: "20240405",
-    tokenAcesso: "ANA456",
-    cadastradoPor: "João Vítor Marcelino",
-    status: "Ativo",
-    situacao: "Regular",
-  },
-  {
-    id: 5,
-    nome: "Carlos Mendes",
-    dataCadastro: "12/05/2024 ás 11:45",
-    matricula: "20240512",
-    tokenAcesso: "CAR321",
-    cadastradoPor: "Marcos Pereira",
-    status: "Inativo",
-    situacao: "Inadimplente de pagamento",
-  },
-];
+function exportToCSV(data: any[], filiais: any[]) {
+  const getNomeFilial = (id_filial: number) => {
+    const filial = filiais.find((f) => f.id_filial === id_filial);
+    return filial?.nome_filial || "N/A";
+  };
 
-function exportToCSV(data: any[]) {
   const header = [
     "Aluno",
     "Data de Cadastro",
     "Matrícula",
     "CPF",
+    "Filial",
     "Situação",
     "Status",
   ];
@@ -85,6 +37,7 @@ function exportToCSV(data: any[]) {
       : "N/A",
     aluno.matricula_aluno,
     aluno.cpf_aluno,
+    getNomeFilial(aluno.id_filial),
     aluno.situacao === "regular"
       ? "Regular"
       : aluno.situacao === "aguardando pagamento"
@@ -105,12 +58,17 @@ function exportToCSV(data: any[]) {
   document.body.removeChild(link);
 }
 
-function exportToExcel(data: any[]) {
+function exportToExcel(data: any[], filiais: any[]) {
   // Gera um arquivo Excel simples (XLSX real precisa de libs como SheetJS)
-  exportToCSV(data); // Para simplificação, exporta como CSV
+  exportToCSV(data, filiais); // Para simplificação, exporta como CSV
 }
 
-function exportToPDF(data: any[]) {
+function exportToPDF(data: any[], filiais: any[]) {
+  const getNomeFilial = (id_filial: number) => {
+    const filial = filiais.find((f) => f.id_filial === id_filial);
+    return filial?.nome_filial || "N/A";
+  };
+
   // Exportação simples para PDF usando window.print()
   const printWindow = window.open("", "_blank");
   if (!printWindow) return;
@@ -120,6 +78,7 @@ function exportToPDF(data: any[]) {
       <th style="padding:4px;border:1px solid #ccc;">Data de Cadastro</th>
       <th style="padding:4px;border:1px solid #ccc;">Matrícula</th>
       <th style="padding:4px;border:1px solid #ccc;">CPF</th>
+      <th style="padding:4px;border:1px solid #ccc;">Filial</th>
       <th style="padding:4px;border:1px solid #ccc;">Situação</th>
       <th style="padding:4px;border:1px solid #ccc;">Status</th>
     </tr>
@@ -138,6 +97,9 @@ function exportToPDF(data: any[]) {
           aluno.matricula_aluno
         }</td>
         <td style="padding:4px;border:1px solid #ccc;">${aluno.cpf_aluno}</td>
+        <td style="padding:4px;border:1px solid #ccc;">${getNomeFilial(
+          aluno.id_filial
+        )}</td>
         <td style="padding:4px;border:1px solid #ccc;">${
           aluno.situacao === "regular"
             ? "Regular"
@@ -167,12 +129,18 @@ function exportToPDF(data: any[]) {
   printWindow.print();
 }
 
-function copyTable(data: any[]) {
+function copyTable(data: any[], filiais: any[]) {
+  const getNomeFilial = (id_filial: number) => {
+    const filial = filiais.find((f) => f.id_filial === id_filial);
+    return filial?.nome_filial || "N/A";
+  };
+
   const header = [
     "Aluno",
     "Data de Cadastro",
     "Matrícula",
     "CPF",
+    "Filial",
     "Situação",
     "Status",
   ];
@@ -183,6 +151,7 @@ function copyTable(data: any[]) {
       : "N/A",
     aluno.matricula_aluno,
     aluno.cpf_aluno,
+    getNomeFilial(aluno.id_filial),
     aluno.situacao === "regular"
       ? "Regular"
       : aluno.situacao === "aguardando pagamento"
@@ -198,12 +167,34 @@ function copyTable(data: any[]) {
 export default function ConsultaAlunos() {
   const [busca, setBusca] = useState("");
   const [alunos, setAlunos] = useState<any[]>([]);
+  const [filiais, setFiliais] = useState<any[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [alunoSelecionado, setAlunoSelecionado] = useState<any>(null);
   const { token } = useAuth();
 
   const [page, setPage] = useState(1);
   const pageSize = 5;
+
+  // Função para buscar filiais
+  useEffect(() => {
+    async function fetchFiliais() {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/empresas/listar-filiais`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setFiliais(data);
+        }
+      } catch (err) {
+        console.error("Erro ao buscar filiais:", err);
+      }
+    }
+    if (token) fetchFiliais();
+  }, [token]);
 
   useEffect(() => {
     async function fetchAlunos() {
@@ -242,6 +233,12 @@ export default function ConsultaAlunos() {
     if (token) fetchAlunos();
   }, [token]);
 
+  // Função para obter nome da filial
+  const getNomeFilial = (id_filial: number) => {
+    const filial = filiais.find((f) => f.id_filial === id_filial);
+    return filial?.nome_filial || "N/A";
+  };
+
   const alunosFiltrados = alunos.filter(
     (a) =>
       (a.nome_aluno &&
@@ -261,9 +258,10 @@ export default function ConsultaAlunos() {
     page * pageSize
   );
 
+  console.log(alunos);
   return (
-    <div className="p-4 max-w-7xl mx-auto space-y-8">
-      <div className="w-full bg-white p-6 rounded-lg shadow-md sm:p-10">
+    <div className="py-4 max-w-7xl mx-auto space-y-8">
+      <div className="w-full bg-white px-2 py-6 rounded-lg shadow-md sm:px-4 sm:py-10">
         <div className="flex items-center text-sm text-muted-foreground mb-4">
           <span className="text-gray-500 hover:text-gray-700 cursor-pointer">
             Página Inicial
@@ -294,7 +292,7 @@ export default function ConsultaAlunos() {
             <div className="flex flex-wrap gap-2">
               <button
                 className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-blue-100 text-blue-700 hover:bg-blue-200 text-sm"
-                onClick={() => exportToCSV(alunosFiltrados)}
+                onClick={() => exportToCSV(alunosFiltrados, filiais)}
                 type="button"
                 title="Exportar CSV"
               >
@@ -302,7 +300,7 @@ export default function ConsultaAlunos() {
               </button>
               <button
                 className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-green-100 text-green-700 hover:bg-green-200 text-sm"
-                onClick={() => exportToExcel(alunosFiltrados)}
+                onClick={() => exportToExcel(alunosFiltrados, filiais)}
                 type="button"
                 title="Exportar Excel"
               >
@@ -310,7 +308,7 @@ export default function ConsultaAlunos() {
               </button>
               <button
                 className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-red-100 text-red-700 hover:bg-red-200 text-sm"
-                onClick={() => exportToPDF(alunosFiltrados)}
+                onClick={() => exportToPDF(alunosFiltrados, filiais)}
                 type="button"
                 title="Exportar PDF"
               >
@@ -318,7 +316,7 @@ export default function ConsultaAlunos() {
               </button>
               <button
                 className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm"
-                onClick={() => copyTable(alunosFiltrados)}
+                onClick={() => copyTable(alunosFiltrados, filiais)}
                 type="button"
                 title="Copiar tabela"
               >
@@ -341,16 +339,19 @@ export default function ConsultaAlunos() {
                   Aluno
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Data de Cadastro
+                  CPF
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                   Matrícula
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  CPF
+                  Data de Cadastro
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Cadastrado por
+                  Plano
+                </th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                  Filial do Aluno
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                   Situação
@@ -392,6 +393,9 @@ export default function ConsultaAlunos() {
                         </button>
                       </td>
                       <td className="px-4 py-2">{aluno.nome_aluno}</td>
+                      <td className="px-4 py-2">{aluno.cpf_aluno}</td>
+                      <td className="px-4 py-2">{aluno.matricula_aluno}</td>
+
                       <td className="px-4 py-2">
                         {aluno.data_cadastro
                           ? new Date(aluno.data_cadastro).toLocaleDateString(
@@ -399,14 +403,11 @@ export default function ConsultaAlunos() {
                             )
                           : "N/A"}
                       </td>
-                      <td className="px-4 py-2">{aluno.matricula_aluno}</td>
-                      <td className="px-4 py-2">{aluno.cpf_aluno}</td>
-                      <td className="px-4 py-2 flex items-center gap-2">
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-200">
-                          <User size={18} className="text-gray-500" />
-                        </span>
-                        <span>Sistema</span>
+                      <td className="px-4 py-2">{aluno.plano_aluno}</td>
+                      <td className="px-4 py-2">
+                        {getNomeFilial(aluno.id_filial)}
                       </td>
+
                       <td className="px-4 py-2">
                         <span
                           className={
@@ -472,14 +473,14 @@ export default function ConsultaAlunos() {
           </div>
         </div>
         <ModalComponente
-          header="Dados da Filial"
+          header="Dados do Aluno"
           opened={modalOpen}
           onClose={() => setModalOpen(false)}
           hasForm={false}
           hasSaveButton={false}
           classNameBody="!text-md"
         >
-          <EditarCadastroAluno filial={alunoSelecionado} />
+          <EditarCadastroAluno alunoSelecionado={alunoSelecionado} />
         </ModalComponente>{" "}
       </div>
     </div>
