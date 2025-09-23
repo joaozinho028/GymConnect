@@ -108,9 +108,12 @@ export default function ConsultaPerfis() {
   useEffect(() => {
     async function fetchPerfis() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/perfis/listar-perfis`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/perfis/consultar-perfis`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         if (res.ok) {
           const data = await res.json();
           setPerfis(data);
@@ -118,7 +121,7 @@ export default function ConsultaPerfis() {
           const data = await res.json();
           Swal.fire({
             icon: "error",
-            text: data?.message || "Erro ao buscar usuários.",
+            text: data?.message || "Erro ao buscar perfis.",
             timer: 2500,
             showConfirmButton: false,
             toast: true,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import logoCr from "@/public/image/login.png";
+import logoCr from "@/public/image/banner.png";
 import Image from "next/image";
 import { FormEvent, useRef, useState } from "react";
 import Swal from "sweetalert2";
@@ -51,7 +51,7 @@ export default function Login() {
           toast: true,
           position: "top-end",
         });
-        login(data.token);
+        login(data.token, data.user);
       } else if (res.status === 401) {
         Swal.fire({
           icon: "error",
