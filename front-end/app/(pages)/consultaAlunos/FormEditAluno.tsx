@@ -3,8 +3,8 @@ import Button from "@/components/Forms/Button";
 import Input from "@/components/Forms/Input";
 import InputSelectComponent from "@/components/Forms/InputSelect";
 import { GetForm } from "@/utils";
-import { Save } from "lucide-react";
-import { useState } from "react";
+import { CreditCard, Save, UserX } from "lucide-react";
+import { useEffect, useState } from "react";
 import * as yup from "yup";
 
 // Simulação de busca de dados (substitua por chamada real à API se necessário)
@@ -36,7 +36,7 @@ const filiaisMock = [
   // ...outras filiais...
 ];
 
-const EditarCadastroAluno = ({ usuarioSelecionado, rest }: any) => {
+const EditarCadastroAluno = ({ alunoSelecionado, rest }: any) => {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -47,6 +47,26 @@ const EditarCadastroAluno = ({ usuarioSelecionado, rest }: any) => {
     yup.ObjectSchema<{}, yup.AnyObject, {}, "">
   >(yup.object().shape({}));
   const { handleSubmit, ...form } = GetForm(yupSchema, setYupSchema);
+
+  // Preencher os campos quando alunoSelecionado mudar
+  useEffect(() => {
+    if (alunoSelecionado) {
+      setNome(alunoSelecionado.nome_aluno || "");
+      setEmail(alunoSelecionado.email_aluno || "");
+      setTelefone(alunoSelecionado.telefone_aluno || "");
+      setCpf(alunoSelecionado.cpf_aluno || "");
+      setPlano(alunoSelecionado.plano_aluno || "");
+
+      // Formatação da data de matrícula se existir
+      if (alunoSelecionado.data_cadastro) {
+        const data = new Date(alunoSelecionado.data_cadastro);
+        const dataFormatada = data.toISOString().split("T")[0];
+        setMatricula(dataFormatada);
+      } else {
+        setMatricula("");
+      }
+    }
+  }, [alunoSelecionado]);
 
   const onSubmitFunction = async () => {
     const aluno = {
@@ -60,6 +80,7 @@ const EditarCadastroAluno = ({ usuarioSelecionado, rest }: any) => {
     console.log("Aluno cadastrado:", aluno);
   };
 
+  console.log(alunoSelecionado);
   const opcoesPlano = [
     { label: "Mensal", value: "mensal" },
     { label: "Trimestral", value: "trimestral" },
@@ -123,6 +144,11 @@ const EditarCadastroAluno = ({ usuarioSelecionado, rest }: any) => {
             />
           </div>
 
+          <hr />
+          <div className="font-bold text-sm">
+            <p>Alterar Configurações</p>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <InputSelectComponent
               label="Plano"
@@ -135,20 +161,56 @@ const EditarCadastroAluno = ({ usuarioSelecionado, rest }: any) => {
               options={opcoesPlano}
               width="w-full"
             />
-            <Input
-              label="Data de Matrícula"
-              name="matricula"
-              type="date"
+
+            <InputSelectComponent
+              label="filial"
+              name="filial"
               required
               error="Preencha esse campo!"
               formulario={form}
-              value={matricula}
-              onChange={(e) => setMatricula(e.target.value)}
+              value={plano}
+              onChange={(e) => setPlano(e.target.value)}
+              options={opcoesPlano}
               width="w-full"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:flex sm:justify-end sm:space-x-4 gap-2 sm:pt-4">
+            <Button
+              className="p-2 w-full sm:w-[280px] bg-blue-600 cursor-pointer hover:bg-blue-700 text-white hover:text-white"
+              type="button"
+              onClick={() => {
+                console.log(
+                  "Alterar forma de pagamento do aluno:",
+                  alunoSelecionado
+                );
+                // Aqui você pode implementar a lógica para alterar a forma de pagamento
+                // Por exemplo, abrir outro modal ou navegar para outra página
+              }}
+            >
+              <CreditCard size={18} className="inline-block mr-2" />
+              Alterar forma de pagamento
+            </Button>
+            <Button
+              className="p-2 w-full sm:w-[180px] bg-red-600 cursor-pointer hover:bg-red-700 text-white hover:text-white"
+              type="button"
+              onClick={() => {
+                console.log("Inativar usuário:", alunoSelecionado);
+                // Aqui você pode implementar a confirmação e lógica para inativar o usuário
+                // Por exemplo, mostrar um modal de confirmação antes de inativar
+                if (
+                  window.confirm(
+                    "Tem certeza que deseja inativar este usuário?"
+                  )
+                ) {
+                  console.log("Usuário inativado:", alunoSelecionado?.id_aluno);
+                  // Implementar chamada para API de inativação
+                }
+              }}
+            >
+              <UserX size={18} className="inline-block mr-2" />
+              Inativar usuário
+            </Button>
             <Button
               className="p-2 w-full sm:w-[150px] bg-green-600 cursor-pointer hover:bg-green-700 text-white hover:text-white"
               type="submit"

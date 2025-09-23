@@ -1,6 +1,7 @@
 "use client";
 import ModalComponente from "@/components/Modal/ModalComponent";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import {
   ChevronLeft,
   ChevronRight,
@@ -110,6 +111,7 @@ export default function ConsultaFiliais() {
   const [filiais, setFiliais] = useState<any[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const { token } = useAuth();
+  const { isAdmin, loading: loadingAdmin } = useIsAdmin();
 
   const [filialSelecionada, setFilialSelecionada] = useState<any>(null);
 
@@ -281,17 +283,29 @@ export default function ConsultaFiliais() {
                       style={{ height: "60px" }}
                     >
                       <td className="px-4 py-2 flex gap-2">
-                        <button
-                          title="Editar"
-                          className="p-2 rounded cursor-pointer hover:bg-gray-100 text-green-600"
-                          onClick={() => {
-                            setFilialSelecionada(filial);
-                            setModalOpen(true);
-                          }}
-                          type="button"
-                        >
-                          <Pencil size={18} />
-                        </button>
+                        {isAdmin && (
+                          <button
+                            title="Editar"
+                            className="p-2 rounded cursor-pointer hover:bg-gray-100 text-green-600"
+                            onClick={() => {
+                              setFilialSelecionada(filial);
+                              setModalOpen(true);
+                            }}
+                            type="button"
+                          >
+                            <Pencil size={18} />
+                          </button>
+                        )}
+                        {!isAdmin && loadingAdmin && (
+                          <span className="text-xs text-gray-400 px-2 py-1">
+                            Verificando permissões...
+                          </span>
+                        )}
+                        {!isAdmin && !loadingAdmin && (
+                          <span className="text-xs text-gray-400 px-2 py-1">
+                            Sem permissão
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-2">{filial.nome || ""}</td>
                       <td className="px-4 py-2">{filial.cnpj || ""}</td>

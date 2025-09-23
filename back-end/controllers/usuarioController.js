@@ -1,5 +1,6 @@
 const supabase = require("../db");
 const bcrypt = require("bcrypt");
+const { registrarAuditoria } = require("./auditoriaController");
 
 const cadastrarUsuario = async (req, res) => {
   const { nome_usuario, email_usuario, senha_usuario, id_filial, id_perfil } =
@@ -45,6 +46,17 @@ const cadastrarUsuario = async (req, res) => {
       });
     }
 
+    // Registrar auditoria
+    console.log("🔍 Tentando registrar auditoria para cadastro de usuário...");
+    const auditoriaResult = await registrarAuditoria(
+      id_empresa,
+      req.user.id_usuario, // Usuário que fez o cadastro
+      id_filial,
+      "Cadastrou usuário",
+      `Cadastrou o usuário: ${nome_usuario} (${email_usuario})`
+    );
+    console.log("📝 Resultado da auditoria:", auditoriaResult);
+
     res.status(201).json({
       message: "Usuário cadastrado com sucesso!",
       user: data && data[0] ? data[0] : null,
@@ -64,7 +76,7 @@ const listarUsuarios = async (req, res) => {
     const { data, error } = await supabase
       .from("usuarios")
       .select(
-        `id_usuario, nome_usuario, email_usuario, status_usuario, perfis(nome_perfil), filiais(nome_filial), created_at`
+        `id_usuario, nome_usuario, email_usuario, status_usuario, id_perfil, id_filial, perfis(nome_perfil), filiais(nome_filial), created_at`
       )
       .eq("id_empresa", id_empresa);
     if (error) {
@@ -77,6 +89,8 @@ const listarUsuarios = async (req, res) => {
       id: u.id_usuario,
       nome: u.nome_usuario,
       email: u.email_usuario,
+      id_perfil: u.id_perfil,
+      id_filial: u.id_filial,
       perfil: u.perfis?.nome_perfil || "",
       filial: u.filiais?.nome_filial || "",
       status_usuario: u.status_usuario,
@@ -144,6 +158,18 @@ const alterarStatusUsuario = async (req, res) => {
         .status(404)
         .json({ message: "Usuário não encontrado ou não pertence à empresa." });
     }
+
+    // Registrar auditoria
+    const acao = status_usuario ? "Ativou usuário" : "Inativou usuário";
+    const usuarioAfetado = data[0];
+    await registrarAuditoria(
+      id_empresa,
+      req.user.id_usuario, // Usuário que fez a alteração
+      req.user.id_filial, // Filial do usuário que fez a alteração
+      acao,
+      `${acao}: ${usuarioAfetado.nome_usuario} (ID: ${usuarioAfetado.id_usuario})`
+    );
+
     res.json({ message: "Status atualizado com sucesso!", user: data[0] });
   } catch (err) {
     res
@@ -152,4 +178,143 @@ const alterarStatusUsuario = async (req, res) => {
   }
 };
 
-module.exports = { cadastrarUsuario, listarUsuarios, alterarStatusUsuario };
+const editarUsuario = async (req, res) => {
+  try {
+    const { id_usuario, nome_usuario, email_usuario, id_perfil, id_filial } =
+      req.body;
+    const { id_empresa } = req.user;
+
+    if (!id_usuario) {
+      return res.status(400).json({
+        message: "ID do usuário é obrigatório.",
+      });
+    }
+
+    // Validar e converter IDs para inteiros ou null
+    const perfilId = id_perfil && id_perfil !== "" ? parseInt(id_perfil) : null;
+    const filialId = id_filial && id_filial !== "" ? parseInt(id_filial) : null;
+
+    // Verificar se os IDs são válidos (se fornecidos)
+    if (id_perfil && isNaN(perfilId)) {
+      return res.status(400).json({
+        message: "ID do perfil deve ser um número válido.",
+      });
+    }
+
+    if (id_filial && isNaN(filialId)) {
+      return res.status(400).json({
+        message: "ID da filial deve ser um número válido.",
+      });
+    }
+
+    // Verificar se o usuário existe e pertence à empresa
+    const { data: usuarioExistente, error: errorBusca } = await supabase
+      .from("usuarios")
+      .select("id_usuario, nome_usuario, email_usuario, id_perfil, id_filial")
+      .eq("id_usuario", id_usuario)
+      .eq("id_empresa", id_empresa)
+      .single();
+
+    if (errorBusca || !usuarioExistente) {
+      return res.status(404).json({
+        message: "Usuário não encontrado ou não pertence à sua empresa.",
+      });
+    }
+
+    // Verificar se o email já está sendo usado por outro usuário
+    if (email_usuario !== usuarioExistente.email_usuario) {
+      const { data: emailExists } = await supabase
+        .from("usuarios")
+        .select("id_usuario")
+        .eq("email_usuario", email_usuario)
+        .neq("id_usuario", id_usuario)
+        .single();
+
+      if (emailExists) {
+        return res.status(400).json({
+          message: "Este email já está sendo usado por outro usuário.",
+        });
+      }
+    }
+
+    // Atualizar o usuário
+    const { data, error } = await supabase
+      .from("usuarios")
+      .update({
+        nome_usuario,
+        email_usuario,
+        id_perfil: perfilId,
+        id_filial: filialId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id_usuario", id_usuario)
+      .eq("id_empresa", id_empresa)
+      .select();
+
+    if (error) {
+      return res.status(500).json({
+        message: error.message || "Erro ao atualizar usuário.",
+        error,
+      });
+    }
+
+    if (!data || data.length === 0) {
+      return res.status(404).json({
+        message: "Usuário não encontrado.",
+      });
+    }
+
+    // Registrar auditoria - verificar quais campos foram alterados
+    const alteracoes = [];
+    if (nome_usuario !== usuarioExistente.nome_usuario) {
+      alteracoes.push(
+        `Nome: "${usuarioExistente.nome_usuario}" → "${nome_usuario}"`
+      );
+    }
+    if (email_usuario !== usuarioExistente.email_usuario) {
+      alteracoes.push(
+        `Email: "${usuarioExistente.email_usuario}" → "${email_usuario}"`
+      );
+    }
+    if (perfilId !== usuarioExistente.id_perfil) {
+      alteracoes.push(
+        `Perfil ID: "${usuarioExistente.id_perfil}" → "${perfilId}"`
+      );
+    }
+    if (filialId !== usuarioExistente.id_filial) {
+      alteracoes.push(
+        `Filial ID: "${usuarioExistente.id_filial}" → "${filialId}"`
+      );
+    }
+
+    if (alteracoes.length > 0) {
+      await registrarAuditoria(
+        id_empresa,
+        req.user.id_usuario, // Usuário que fez a edição
+        req.user.id_filial, // Filial do usuário que fez a edição
+        "Editou usuário",
+        `Editou o usuário: ${
+          usuarioExistente.nome_usuario
+        } (ID: ${id_usuario}). Alterações: ${alteracoes.join(", ")}`
+      );
+    }
+
+    res.json({
+      message: "Usuário atualizado com sucesso!",
+      user: data[0],
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      message: err?.message || "Erro no servidor.",
+      error: err,
+    });
+  }
+};
+
+module.exports = {
+  cadastrarUsuario,
+  editarUsuario,
+  listarUsuarios,
+  alterarStatusUsuario,
+};

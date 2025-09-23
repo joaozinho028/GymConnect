@@ -311,13 +311,12 @@ const confirmarPagamentoBoleto = async (dadosWebhook) => {
 
 const consultarAlunos = async (req, res) => {
   try {
-    const { id_empresa, id_filial } = req.user;
+    const { id_empresa } = req.user;
 
     const { data: alunos, error } = await supabase
       .from("alunos")
       .select("*")
       .eq("id_empresa", id_empresa)
-      .eq("id_filial", id_filial)
       .order("data_cadastro", { ascending: false });
 
     if (error) {
@@ -372,6 +371,8 @@ const obterEstatisticasAlunos = async (req, res) => {
   }
 };
 
+const editarAlunos = async (req, res) => {};
+
 module.exports = {
   cadastrarAluno,
   consultarAlunos,
@@ -379,4 +380,5 @@ module.exports = {
   calcularValorPlano,
   gerarMatriculaUnica,
   obterEstatisticasAlunos,
+  editarAlunos,
 };
