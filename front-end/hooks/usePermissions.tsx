@@ -17,6 +17,12 @@ interface Permissoes {
     usuarios: boolean;
     perfis: boolean;
   };
+  precificacao?: {
+    planos: boolean;
+  };
+  ajuste_fluxo_caixa?: {
+    categorias: boolean;
+  };
 }
 
 interface DecodedToken {
@@ -49,6 +55,12 @@ export const usePermissions = () => {
           historico_usuario: false,
           usuarios: false,
           perfis: false,
+        },
+        precificacao: {
+          planos: false,
+        },
+        ajuste_fluxo_caixa: {
+          categorias: false,
         },
       };
     }
@@ -83,6 +95,12 @@ export const usePermissions = () => {
           usuarios: false,
           perfis: false,
         },
+        precificacao: basePermissions.precificacao || {
+          planos: false,
+        },
+        ajuste_fluxo_caixa: basePermissions.ajuste_fluxo_caixa || {
+          categorias: false,
+        },
       };
     } catch (error) {
       console.error("Erro ao decodificar token:", error);
@@ -99,6 +117,12 @@ export const usePermissions = () => {
           historico_usuario: false,
           usuarios: false,
           perfis: false,
+        },
+        precificacao: {
+          planos: false,
+        },
+        ajuste_fluxo_caixa: {
+          categorias: false,
         },
       };
     }

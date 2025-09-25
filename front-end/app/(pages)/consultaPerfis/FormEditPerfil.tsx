@@ -27,7 +27,10 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
     importacao: false,
     exportacao: false,
     configuracoes: false,
+    precificacao: false,
+    ajuste_fluxo_caixa: false,
   });
+
   // Permissões dos submenus de configurações
   const [subConfig, setSubConfig] = useState({
     informacoes_bancarias: false,
@@ -38,6 +41,16 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
     perfis: false,
   });
 
+  // Permissões dos submenus de precificação
+  const [subPrecificacao, setSubPrecificacao] = useState({
+    planos: false,
+  });
+
+  // Permissões dos submenus de ajuste fluxo de caixa
+  const [subAjusteFluxo, setSubAjusteFluxo] = useState({
+    categorias: false,
+  });
+
   const modulosList = [
     { key: "alunos", label: "Módulo de Alunos" },
     { key: "filiais", label: "Módulo de Filiais" },
@@ -45,7 +58,10 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
     { key: "configuracoes", label: "Módulo de Configurações" },
     { key: "importacao", label: "Módulo de Importação" },
     { key: "exportacao", label: "Módulo de Exportação" },
+    { key: "precificacao", label: "Módulo de Precificação" },
+    { key: "ajuste_fluxo_caixa", label: "Ajustes Fluxo de Caixa" },
   ];
+
   const subConfigList = [
     { key: "informacoes_bancarias", label: "Informações bancárias" },
     { key: "plano_gym_connect", label: "Plano Gym Connect" },
@@ -54,6 +70,10 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
     { key: "usuarios", label: "Usuários (cadastro e consulta)" },
     { key: "perfis", label: "Perfis (cadastro e consulta)" },
   ];
+
+  const subPrecificacaoList = [{ key: "planos", label: "Planos" }];
+
+  const subAjusteFluxoList = [{ key: "categorias", label: "Categorias" }];
 
   useEffect(() => {
     if (perfil) {
@@ -90,6 +110,8 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
           importacao: permissoes.importacao || false,
           exportacao: permissoes.exportacao || false,
           configuracoes: permissoes.configuracoes ? true : false,
+          precificacao: permissoes.precificacao ? true : false,
+          ajuste_fluxo_caixa: permissoes.ajuste_fluxo_caixa ? true : false,
         });
 
         // Atualizar estado das sub-configurações
@@ -118,6 +140,34 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
             historico_usuario: false,
             usuarios: false,
             perfis: false,
+          });
+        }
+
+        // Atualizar estado das sub-precificações
+        if (
+          permissoes.precificacao &&
+          typeof permissoes.precificacao === "object"
+        ) {
+          setSubPrecificacao({
+            planos: permissoes.precificacao.planos || false,
+          });
+        } else {
+          setSubPrecificacao({
+            planos: false,
+          });
+        }
+
+        // Atualizar estado das sub-ajustes de fluxo
+        if (
+          permissoes.ajuste_fluxo_caixa &&
+          typeof permissoes.ajuste_fluxo_caixa === "object"
+        ) {
+          setSubAjusteFluxo({
+            categorias: permissoes.ajuste_fluxo_caixa.categorias || false,
+          });
+        } else {
+          setSubAjusteFluxo({
+            categorias: false,
           });
         }
       }
@@ -168,6 +218,16 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
               historico_usuario: subConfig.historico_usuario,
               usuarios: subConfig.usuarios,
               perfis: subConfig.perfis,
+            }
+          : false,
+        precificacao: modulos.precificacao
+          ? {
+              planos: subPrecificacao.planos,
+            }
+          : false,
+        ajuste_fluxo_caixa: modulos.ajuste_fluxo_caixa
+          ? {
+              categorias: subAjusteFluxo.categorias,
             }
           : false,
       };
@@ -235,6 +295,30 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
             if (subPermissoes.length > 0) {
               permissoesFormatadas.push(
                 `Módulo Configurações (${subPermissoes.join(", ")})`
+              );
+            }
+          }
+
+          // Adicionar permissões de precificação formatadas
+          if (modulos.precificacao) {
+            const subPrecificacoes = [];
+            if (subPrecificacao.planos) subPrecificacoes.push("Planos");
+
+            if (subPrecificacoes.length > 0) {
+              permissoesFormatadas.push(
+                `Módulo Precificação (${subPrecificacoes.join(", ")})`
+              );
+            }
+          }
+
+          // Adicionar permissões de ajuste fluxo de caixa formatadas
+          if (modulos.ajuste_fluxo_caixa) {
+            const subAjustes = [];
+            if (subAjusteFluxo.categorias) subAjustes.push("Categorias");
+
+            if (subAjustes.length > 0) {
+              permissoesFormatadas.push(
+                `Ajustes Fluxo de Caixa (${subAjustes.join(", ")})`
               );
             }
           }
@@ -314,6 +398,7 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
                     />
                     <span className="text-sm text-gray-700">{mod.label}</span>
                   </label>
+
                   {/* Sub-permissões do módulo de Configurações */}
                   {mod.key === "configuracoes" && modulos.configuracoes && (
                     <div className="ml-6 mt-2 space-y-2 border-l pl-4 border-gray-300">
@@ -341,6 +426,71 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
                       ))}
                     </div>
                   )}
+
+                  {/* Sub-permissões do módulo de Precificação */}
+                  {mod.key === "precificacao" && modulos.precificacao && (
+                    <div className="ml-6 mt-2 space-y-2 border-l pl-4 border-gray-300">
+                      {subPrecificacaoList.map((sub) => (
+                        <label
+                          key={sub.key}
+                          className="flex items-center text-sm text-gray-600 hover:text-gray-800 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={
+                              subPrecificacao[
+                                sub.key as keyof typeof subPrecificacao
+                              ]
+                            }
+                            onChange={() =>
+                              setSubPrecificacao((prev) => ({
+                                ...prev,
+                                [sub.key]:
+                                  !prev[
+                                    sub.key as keyof typeof subPrecificacao
+                                  ],
+                              }))
+                            }
+                            className="mr-2 h-4 w-4 text-primary"
+                          />
+                          {sub.label}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Sub-permissões do módulo de Ajuste Fluxo de Caixa */}
+                  {mod.key === "ajuste_fluxo_caixa" &&
+                    modulos.ajuste_fluxo_caixa && (
+                      <div className="ml-6 mt-2 space-y-2 border-l pl-4 border-gray-300">
+                        {subAjusteFluxoList.map((sub) => (
+                          <label
+                            key={sub.key}
+                            className="flex items-center text-sm text-gray-600 hover:text-gray-800 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={
+                                subAjusteFluxo[
+                                  sub.key as keyof typeof subAjusteFluxo
+                                ]
+                              }
+                              onChange={() =>
+                                setSubAjusteFluxo((prev) => ({
+                                  ...prev,
+                                  [sub.key]:
+                                    !prev[
+                                      sub.key as keyof typeof subAjusteFluxo
+                                    ],
+                                }))
+                              }
+                              className="mr-2 h-4 w-4 text-primary"
+                            />
+                            {sub.label}
+                          </label>
+                        ))}
+                      </div>
+                    )}
                 </div>
               ))}
             </div>
