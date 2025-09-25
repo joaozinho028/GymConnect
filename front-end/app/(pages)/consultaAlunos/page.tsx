@@ -259,6 +259,13 @@ export default function ConsultaAlunos() {
   );
 
   console.log(alunos);
+
+  const atualizarAlunoNaLista = (alunoEditado: any) => {
+    setAlunos((prev) =>
+      prev.map((a) => (a.id_aluno === alunoEditado.id_aluno ? alunoEditado : a))
+    );
+  };
+
   return (
     <div className="py-4 max-w-7xl mx-auto space-y-8">
       <div className="w-full bg-white px-2 py-6 rounded-lg shadow-md sm:px-4 sm:py-10">
@@ -480,7 +487,21 @@ export default function ConsultaAlunos() {
           hasSaveButton={false}
           classNameBody="!text-md"
         >
-          <EditarCadastroAluno alunoSelecionado={alunoSelecionado} />
+          <EditarCadastroAluno
+            alunoSelecionado={alunoSelecionado}
+            onSave={(alunoEditado: any) => {
+              atualizarAlunoNaLista(alunoEditado);
+              setModalOpen(false);
+              Swal.fire({
+                icon: "success",
+                text: "Aluno atualizado com sucesso!",
+                timer: 2000,
+                showConfirmButton: false,
+                toast: true,
+                position: "top-end",
+              });
+            }}
+          />
         </ModalComponente>{" "}
       </div>
     </div>

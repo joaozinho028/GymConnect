@@ -213,19 +213,13 @@ const EditarFilial = ({ filial, onSave }: any) => {
 
         if (onSave) {
           onSave({
-            ...filial,
-            nome_filial: values.nome,
-            cnpj_filial: cnpjLimpo,
-            telefone_filial: telefoneLimpo,
-            endereco: {
-              cep: cepLimpo,
-              rua: values.rua,
-              numero: values.numero,
-              bairro: values.bairro,
-              cidade: values.cidade,
-              estado: values.estado,
-            },
-            updated_at: new Date().toISOString(),
+            ...filial, // Mantém dados que não foram alterados
+            ...data.filial, // Dados da API (se a API retornar a filial atualizada)
+            nome: values.nome, // Garante que pelo menos os valores editados estejam atualizados
+            cnpj: aplicarMascaraCNPJ(values.cnpj.replace(/\D/g, "")),
+            telefone: aplicarMascaraTelefone(
+              values.telefone.replace(/\D/g, "")
+            ),
           });
         }
       } else {
