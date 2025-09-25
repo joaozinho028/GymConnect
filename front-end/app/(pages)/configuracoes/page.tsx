@@ -5,6 +5,8 @@ import {
   ChevronDown,
   ChevronUp,
   CreditCard,
+  DollarSign,
+  FilesIcon,
   FileText,
   Layers,
   Search,
@@ -17,6 +19,7 @@ import { useEffect, useState } from "react";
 
 import CadastrarPerfis from "../cadastroPerfil/page";
 import CadastrarUsuarios from "../cadastroUsuario/page";
+import ConfiguracaoPlanos from "../configuracaoPlanos/page";
 import ConsultaPerfis from "../consultaPerfis/page";
 import ConsultaUsuarios from "../consultaUsuario/page";
 import DadosBancarios from "../dadosBancarios/page";
@@ -103,6 +106,19 @@ export default function FormEditaPerfil() {
           name: "Consulta de Perfil",
           icon: Search,
           component: ConsultaPerfis,
+        },
+      ],
+    },
+
+    {
+      name: "Precificação",
+      icon: DollarSign,
+      // permission: "precificacao",
+      submenu: [
+        {
+          name: "Planos",
+          icon: FilesIcon,
+          component: ConfiguracaoPlanos,
         },
       ],
     },
