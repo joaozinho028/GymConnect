@@ -115,6 +115,7 @@ export default function ConsultaFiliais() {
 
   const [filialSelecionada, setFilialSelecionada] = useState<any>(null);
 
+  console.log("oioioioioio", filialSelecionada);
   // Paginação
   const [page, setPage] = useState(1);
   const pageSize = 5;

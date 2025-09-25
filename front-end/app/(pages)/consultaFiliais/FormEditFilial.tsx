@@ -1,41 +1,22 @@
 "use client";
 import Button from "@/components/Forms/Button";
 import Input from "@/components/Forms/Input";
+import { useAuth } from "@/contexts/AuthContext";
 import { GetForm } from "@/utils";
 import { InfoIcon, Save } from "lucide-react";
 import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 import * as yup from "yup";
 
-// Simulação de busca de dados (substitua por chamada real à API se necessário)
-const filiaisMock = [
-  {
-    id: 1,
-    nome: "Academia Centro",
-    cnpj: "12.345.678/0001-90",
-    telefone: "(11) 99999-9999",
-    cep: "01001-000",
-    rua: "Rua das Flores",
-    numero: "100",
-    bairro: "Centro",
-    cidade: "São Paulo",
-    estado: "SP",
-  },
-  {
-    id: 2,
-    nome: "Academia Zona Sul",
-    cnpj: "98.765.432/0001-10",
-    telefone: "(11) 98888-8888",
-    cep: "04567-000",
-    rua: "Av. Paulista",
-    numero: "2000",
-    bairro: "Bela Vista",
-    cidade: "São Paulo",
-    estado: "SP",
-  },
-  // ...outras filiais...
-];
+type FormSchema = yup.ObjectSchema<{
+  nome?: string;
+  cnpj?: string;
+  telefone?: string;
+  // ...outros campos
+}>;
 
-const EditarFilial = ({ filialSelecionada }: any) => {
+const EditarFilial = ({ filial, onSave }: any) => {
+  const { token } = useAuth();
   const [nome, setNome] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -46,41 +27,227 @@ const EditarFilial = ({ filialSelecionada }: any) => {
   const [cidade, setCidade] = useState("");
   const [estado, setEstado] = useState("");
 
-  const [yupSchema, setYupSchema] = useState(yup.object().shape({}));
-  const { handleSubmit, ...form } = GetForm(yupSchema, setYupSchema);
+  const [yupSchema, setYupSchema] = useState<FormSchema>(
+    yup.object().shape({
+      nome: yup.string().required("Nome é obrigatório"),
+      cnpj: yup.string().required("CNPJ é obrigatório"),
+      telefone: yup.string().required("Telefone é obrigatório"),
+      cep: yup.string().required("CEP é obrigatório"),
+      rua: yup.string().required("Rua é obrigatória"),
+      numero: yup.string().required("Número é obrigatório"),
+      bairro: yup.string().required("Bairro é obrigatório"),
+      cidade: yup.string().required("Cidade é obrigatória"),
+      estado: yup.string().required("Estado é obrigatório"),
+    })
+  );
 
-  // Busca os dados da filial pelo id e preenche os campos
+  const { handleSubmit, reset, setValue, ...form } = GetForm(
+    yupSchema as any,
+    setYupSchema as any
+  );
+
   useEffect(() => {
-    if (filialSelecionada?.id) {
-      // Aqui você pode trocar pelo fetch real
-      const filial =
-        filiaisMock.find((f) => f.id === filialSelecionada.id) ||
-        filialSelecionada;
-      setNome(filial.nome || "");
-      setCnpj(filial.cnpj || "");
-      setTelefone(filial.telefone || "");
-      setCep(filial.cep || "");
-      setRua(filial.rua || "");
-      setNumero(filial.numero || "");
-      setBairro(filial.bairro || "");
-      setCidade(filial.cidade || "");
-      setEstado(filial.estado || "");
-    }
-  }, [filialSelecionada]);
+    console.log(filial);
+  }, [filial]);
 
-  const onSubmitFunction = async () => {
-    const filial = {
-      nome,
-      cnpj,
-      telefone,
-      cep,
-      rua,
-      numero,
-      bairro,
-      cidade,
-      estado,
-    };
-    console.log("Filial cadastrada:", filial);
+  // Incluir setValue no objeto form para os componentes Input
+  const formWithSetValue = { ...form, setValue };
+
+  // Funções de máscara personalizadas
+  const aplicarMascaraCNPJ = (valor: string) => {
+    return valor
+      .replace(/\D/g, "")
+      .replace(/(\d{2})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1/$2")
+      .replace(/(\d{4})(\d)/, "$1-$2")
+      .replace(/(-\d{2})\d+?$/, "$1");
+  };
+
+  const aplicarMascaraTelefone = (valor: string) => {
+    return valor
+      .replace(/\D/g, "")
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{5})(\d)/, "$1-$2")
+      .replace(/(-\d{4})\d+?$/, "$1");
+  };
+
+  const aplicarMascaraCEP = (valor: string) => {
+    return valor
+      .replace(/\D/g, "")
+      .replace(/(\d{5})(\d)/, "$1-$2")
+      .replace(/(-\d{3})\d+?$/, "$1");
+  };
+
+  // Função para buscar endereço por CEP
+  const buscarEnderecoPorCep = async (cepValue: string) => {
+    const cepLimpo = cepValue.replace(/\D/g, "");
+
+    if (cepLimpo.length === 8) {
+      try {
+        const response = await fetch(
+          `https://viacep.com.br/ws/${cepLimpo}/json/`
+        );
+        const data = await response.json();
+
+        if (!data.erro) {
+          setRua(data.logradouro || "");
+          setBairro(data.bairro || "");
+          setCidade(data.localidade || "");
+          setEstado(data.uf || "");
+
+          // Atualizar também o formulário para validação
+          setValue("rua", data.logradouro || "");
+          setValue("bairro", data.bairro || "");
+          setValue("cidade", data.localidade || "");
+          setValue("estado", data.uf || "");
+        } else {
+          Swal.fire({
+            icon: "warning",
+            text: "O CEP informado não foi encontrado.",
+            timer: 2500,
+            showConfirmButton: false,
+            toast: true,
+            position: "top-end",
+          });
+        }
+      } catch (error) {
+        console.error("Erro ao buscar CEP:", error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (filial) {
+      const endereco = filial.endereco || {};
+
+      // Preencher os estados com valores já formatados
+      setNome(filial.nome_filial || filial.nome || "");
+      setCnpj(aplicarMascaraCNPJ(filial.cnpj_filial || filial.cnpj || ""));
+      setTelefone(
+        aplicarMascaraTelefone(filial.telefone_filial || filial.telefone || "")
+      );
+      setCep(aplicarMascaraCEP(endereco.cep || ""));
+      setRua(endereco.rua || "");
+      setNumero(endereco.numero || "");
+      setBairro(endereco.bairro || "");
+      setCidade(endereco.cidade || "");
+      setEstado(endereco.estado || "");
+
+      // Resetar o formulário
+      reset({
+        nome: filial.nome_filial || filial.nome || "",
+        cnpj: aplicarMascaraCNPJ(filial.cnpj_filial || filial.cnpj || ""),
+        telefone: aplicarMascaraTelefone(
+          filial.telefone_filial || filial.telefone || ""
+        ),
+        cep: aplicarMascaraCEP(endereco.cep || ""),
+        rua: endereco.rua || "",
+        numero: endereco.numero || "",
+        bairro: endereco.bairro || "",
+        cidade: endereco.cidade || "",
+        estado: endereco.estado || "",
+      });
+    }
+  }, [filial, reset]);
+
+  console.log(filial);
+
+  // Handler para CEP que aplica máscara e busca o endereço
+  const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const valorMascarado = aplicarMascaraCEP(e.target.value);
+    setCep(valorMascarado);
+    setValue("cep", valorMascarado);
+
+    // Buscar endereço quando o CEP tiver 9 caracteres (com hífen)
+    if (valorMascarado.length === 9) {
+      buscarEnderecoPorCep(valorMascarado);
+    }
+  };
+
+  const onSubmitFunction = async (values: any) => {
+    try {
+      // Remover máscaras antes de enviar para a API
+      const cnpjLimpo = values.cnpj.replace(/\D/g, "");
+      const telefoneLimpo = values.telefone.replace(/\D/g, "");
+      const cepLimpo = values.cep.replace(/\D/g, "");
+
+      const body = {
+        id_filial: filial.id,
+        nome_filial: values.nome,
+        cnpj_filial: cnpjLimpo,
+        telefone_filial: telefoneLimpo,
+        cep_filial: cepLimpo,
+        rua_filial: values.rua,
+        numero_filial: values.numero,
+        bairro_filial: values.bairro,
+        cidade_filial: values.cidade,
+        estado_filial: values.estado,
+      };
+
+      console.log("Enviando dados:", body);
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/empresas/editar-filial`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(body),
+        }
+      );
+
+      const data = await res.json();
+
+      if (res.ok) {
+        Swal.fire({
+          icon: "success",
+          text: data?.message || "Filial atualizada com sucesso!",
+          timer: 2500,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+        });
+
+        if (onSave) {
+          onSave({
+            ...filial,
+            nome_filial: values.nome,
+            cnpj_filial: cnpjLimpo,
+            telefone_filial: telefoneLimpo,
+            endereco: {
+              cep: cepLimpo,
+              rua: values.rua,
+              numero: values.numero,
+              bairro: values.bairro,
+              cidade: values.cidade,
+              estado: values.estado,
+            },
+            updated_at: new Date().toISOString(),
+          });
+        }
+      } else {
+        Swal.fire({
+          icon: "error",
+          text: data?.message || "Erro ao atualizar filial.",
+          timer: 2500,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+        });
+      }
+    } catch (err: any) {
+      Swal.fire({
+        icon: "error",
+        text: err?.message || "Erro ao conectar ao servidor.",
+        timer: 2500,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end",
+      });
+    }
   };
 
   return (
@@ -93,19 +260,25 @@ const EditarFilial = ({ filialSelecionada }: any) => {
               name="nome"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={nome}
-              onChange={(e) => setNome(e.target.value)}
+              onChange={(e) => {
+                setNome(e.target.value);
+                setValue("nome", e.target.value);
+              }}
             />
             <Input
               label="CNPJ"
               name="cnpj"
               required
               error="Preencha esse campo!"
-              mascara="cnpj"
-              formulario={form}
+              formulario={formWithSetValue}
               value={cnpj}
-              onChange={(e) => setCnpj(e.target.value)}
+              onChange={(e) => {
+                const valorMascarado = aplicarMascaraCNPJ(e.target.value);
+                setCnpj(valorMascarado);
+                setValue("cnpj", valorMascarado);
+              }}
             />
           </div>
 
@@ -115,20 +288,22 @@ const EditarFilial = ({ filialSelecionada }: any) => {
               name="telefone"
               required
               error="Preencha esse campo!"
-              mascara="telefone"
-              formulario={form}
+              formulario={formWithSetValue}
               value={telefone}
-              onChange={(e) => setTelefone(e.target.value)}
+              onChange={(e) => {
+                const valorMascarado = aplicarMascaraTelefone(e.target.value);
+                setTelefone(valorMascarado);
+                setValue("telefone", valorMascarado);
+              }}
             />
             <Input
               label="CEP"
               name="cep"
               required
               error="Preencha esse campo!"
-              mascara="cep"
-              formulario={form}
+              formulario={formWithSetValue}
               value={cep}
-              onChange={(e) => setCep(e.target.value)}
+              onChange={handleCepChange}
             />
           </div>
 
@@ -138,18 +313,24 @@ const EditarFilial = ({ filialSelecionada }: any) => {
               name="rua"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={rua}
-              onChange={(e) => setRua(e.target.value)}
+              onChange={(e) => {
+                setRua(e.target.value);
+                setValue("rua", e.target.value);
+              }}
             />
             <Input
               label="Número"
               name="numero"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={numero}
-              onChange={(e) => setNumero(e.target.value)}
+              onChange={(e) => {
+                setNumero(e.target.value);
+                setValue("numero", e.target.value);
+              }}
             />
           </div>
 
@@ -159,27 +340,36 @@ const EditarFilial = ({ filialSelecionada }: any) => {
               name="bairro"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={bairro}
-              onChange={(e) => setBairro(e.target.value)}
+              onChange={(e) => {
+                setBairro(e.target.value);
+                setValue("bairro", e.target.value);
+              }}
             />
             <Input
               label="Cidade"
               name="cidade"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={cidade}
-              onChange={(e) => setCidade(e.target.value)}
+              onChange={(e) => {
+                setCidade(e.target.value);
+                setValue("cidade", e.target.value);
+              }}
             />
             <Input
               label="Estado"
               name="estado"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={estado}
-              onChange={(e) => setEstado(e.target.value)}
+              onChange={(e) => {
+                setEstado(e.target.value);
+                setValue("estado", e.target.value);
+              }}
             />
           </div>
 
@@ -188,13 +378,15 @@ const EditarFilial = ({ filialSelecionada }: any) => {
               className="p-2 w-full sm:w-[180px] bg-red-600 cursor-pointer hover:bg-red-700 text-white hover:text-white"
               type="button"
               onClick={() => {
-                // Aqui você pode implementar a confirmação e lógica para inativar o usuário
-                // Por exemplo, mostrar um modal de confirmação antes de inativar
-                if (
-                  window.confirm("Tem certeza que deseja inativar esta filial?")
-                ) {
-                  // Implementar chamada para API de inativação
-                }
+                // Confirmar inativação com SweetAlert2 em vez de confirm básico
+                Swal.fire({
+                  title: "Atenção",
+                  text:
+                    "Para inativar a filial, entre em contato com o suporte, informando que deseja inativar a filial " +
+                    (filial?.nome_filial || filial?.nome || "") +
+                    ".",
+                  icon: "warning",
+                });
               }}
             >
               <InfoIcon size={18} className="inline-block mr-2" />

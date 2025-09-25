@@ -12,6 +12,6 @@ const {
 router.post("/cadastrar-alunos", authMiddleware, cadastrarAluno);
 router.get("/consultar-alunos", authMiddleware, consultarAlunos);
 router.get("/estatisticas/:id_filial", authMiddleware, obterEstatisticasAlunos);
-router.put("/editar-alunos/:id_aluno", authMiddleware, editarAlunos);
+router.put("/editar-alunos", authMiddleware, editarAlunos);
 
 module.exports = router;
