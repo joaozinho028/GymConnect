@@ -371,7 +371,49 @@ const obterEstatisticasAlunos = async (req, res) => {
   }
 };
 
-const editarAlunos = async (req, res) => {};
+const editarAlunos = async (req, res) => {
+  try {
+    const { id_empresa, id_filial } = req.user;
+    const {
+      id_aluno,
+      nome_aluno,
+      email_aluno,
+      telefone_aluno,
+      cpf_aluno,
+      plano_aluno,
+      // Adicione outros campos que desejar permitir edição
+    } = req.body;
+
+    if (!id_aluno) {
+      return res.status(400).json({ message: "ID do aluno é obrigatório." });
+    }
+
+    // Atualizar aluno apenas da empresa e filial do usuário autenticado
+    const { error } = await supabase
+      .from("alunos")
+      .update({
+        nome_aluno,
+        email_aluno,
+        telefone_aluno,
+        cpf_aluno,
+        plano_aluno,
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq("id_aluno", id_aluno)
+      .eq("id_empresa", id_empresa)
+      .eq("id_filial", id_filial);
+
+    if (error) {
+      console.error("Erro ao editar aluno:", error);
+      return res.status(500).json({ message: "Erro ao editar aluno." });
+    }
+
+    res.json({ message: "Aluno atualizado com sucesso!" });
+  } catch (error) {
+    console.error("Erro ao editar aluno:", error);
+    res.status(500).json({ message: "Erro interno do servidor." });
+  }
+};
 
 module.exports = {
   cadastrarAluno,

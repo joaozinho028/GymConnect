@@ -2,13 +2,16 @@
 import Button from "@/components/Forms/Button";
 import Input from "@/components/Forms/Input";
 import InputSelectComponent from "@/components/Forms/InputSelect";
+import { useAuth } from "@/contexts/AuthContext";
 import { GetForm } from "@/utils";
 import { CreditCard, Save, UserX } from "lucide-react";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import * as yup from "yup";
 
-const EditarCadastroAluno = ({ alunoSelecionado, rest }: any) => {
+const EditarCadastroAluno = ({ alunoSelecionado, onSave, rest }: any) => {
+  const { token } = useAuth();
+
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
@@ -18,7 +21,11 @@ const EditarCadastroAluno = ({ alunoSelecionado, rest }: any) => {
   const [yupSchema, setYupSchema] = useState<
     yup.ObjectSchema<{}, yup.AnyObject, {}, "">
   >(yup.object().shape({}));
-  const { handleSubmit, ...form } = GetForm(yupSchema, setYupSchema);
+  const { handleSubmit, reset, setValue, ...form } = GetForm(
+    yupSchema,
+    setYupSchema
+  );
+  const formWithSetValue = { ...form, setValue };
 
   // Preencher os campos quando alunoSelecionado mudar
   useEffect(() => {
@@ -37,22 +44,109 @@ const EditarCadastroAluno = ({ alunoSelecionado, rest }: any) => {
       } else {
         setMatricula("");
       }
-    }
-  }, [alunoSelecionado]);
 
-  const onSubmitFunction = async () => {
-    const aluno = {
-      nome,
-      email,
-      telefone,
-      cpf,
-      plano,
-      matricula,
-    };
-    console.log("Aluno cadastrado:", aluno);
+      // Aqui está o segredo: resetar o form do GetForm!
+      reset({
+        nome: alunoSelecionado.nome_aluno || "",
+        email: alunoSelecionado.email_aluno || "",
+        telefone: alunoSelecionado.telefone_aluno || "",
+        cpf: alunoSelecionado.cpf_aluno || "",
+        plano: alunoSelecionado.plano_aluno || "",
+        matricula: alunoSelecionado.data_cadastro
+          ? new Date(alunoSelecionado.data_cadastro).toISOString().split("T")[0]
+          : "",
+        // Adicione outros campos se necessário
+      });
+    }
+  }, [alunoSelecionado, reset]);
+
+  const onSubmitFunction = async (values: any) => {
+    try {
+      // Remover máscaras antes de enviar para a API
+      const cpfLimpo = values.cpf.replace(/\D/g, "");
+      const telefoneLimpo = values.telefone.replace(/\D/g, "");
+
+      // Lógica para plano: se o usuário selecionou, usa o selecionado, senão mantém o atual
+      const planoFinal =
+        values.plano && values.plano !== ""
+          ? values.plano
+          : alunoSelecionado.plano_aluno || "";
+
+      // Lógica para filial: se o usuário selecionou, usa o selecionado, senão mantém o atual
+      const filialFinal =
+        values.filial && values.filial !== ""
+          ? values.filial
+          : alunoSelecionado.id_filial || "";
+
+      const body = {
+        id_aluno: alunoSelecionado.id_aluno,
+        nome_aluno: values.nome,
+        email_aluno: values.email,
+        telefone_aluno: telefoneLimpo,
+        cpf_aluno: cpfLimpo,
+        plano_aluno: planoFinal,
+        id_filial: filialFinal,
+      };
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/alunos/editar-alunos`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(body),
+        }
+      );
+
+      const data = await res.json();
+
+      if (res.ok) {
+        Swal.fire({
+          icon: "success",
+          text: data?.message || "Aluno atualizado com sucesso!",
+          timer: 2500,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+        });
+
+        if (onSave) {
+          onSave({
+            ...alunoSelecionado,
+            nome_aluno: values.nome,
+            cpf_aluno: cpfLimpo,
+            telefone_aluno: telefoneLimpo,
+            email_aluno: values.email,
+            plano_aluno: planoFinal,
+            id_filial: filialFinal,
+            matricula_aluno: values.matricula,
+            updated_at: new Date().toISOString(),
+          });
+        }
+      } else {
+        Swal.fire({
+          icon: "error",
+          text: data?.message || "Erro ao atualizar aluno.",
+          timer: 2500,
+          showConfirmButton: false,
+          toast: true,
+          position: "top-end",
+        });
+      }
+    } catch (err: any) {
+      Swal.fire({
+        icon: "error",
+        text: err?.message || "Erro ao conectar ao servidor.",
+        timer: 2500,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end",
+      });
+    }
   };
 
-  console.log(alunoSelecionado);
   const opcoesPlano = [
     { label: "Mensal", value: "mensal" },
     { label: "Trimestral", value: "trimestral" },
@@ -73,7 +167,7 @@ const EditarCadastroAluno = ({ alunoSelecionado, rest }: any) => {
               name="nome"
               required
               error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               width="w-full"
@@ -84,7 +178,7 @@ const EditarCadastroAluno = ({ alunoSelecionado, rest }: any) => {
               type="email"
               error="Preencha esse campo!"
               required
-              formulario={form}
+              formulario={formWithSetValue}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               width="w-full"
@@ -98,7 +192,7 @@ const EditarCadastroAluno = ({ alunoSelecionado, rest }: any) => {
               required
               error="Preencha esse campo!"
               mascara="telefone"
-              formulario={form}
+              formulario={formWithSetValue}
               value={telefone}
               onChange={(e) => setTelefone(e.target.value)}
               width="w-full"
@@ -109,7 +203,7 @@ const EditarCadastroAluno = ({ alunoSelecionado, rest }: any) => {
               required
               error="Preencha esse campo!"
               mascara="cpf"
-              formulario={form}
+              formulario={formWithSetValue}
               value={cpf}
               onChange={(e) => setCpf(e.target.value)}
               width="w-full"
@@ -125,9 +219,7 @@ const EditarCadastroAluno = ({ alunoSelecionado, rest }: any) => {
             <InputSelectComponent
               label="Plano"
               name="plano"
-              required
-              error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={plano}
               onChange={(e) => setPlano(e.target.value)}
               options={opcoesPlano}
@@ -137,9 +229,7 @@ const EditarCadastroAluno = ({ alunoSelecionado, rest }: any) => {
             <InputSelectComponent
               label="filial"
               name="filial"
-              required
-              error="Preencha esse campo!"
-              formulario={form}
+              formulario={formWithSetValue}
               value={plano}
               onChange={(e) => setPlano(e.target.value)}
               options={opcoesPlano}
