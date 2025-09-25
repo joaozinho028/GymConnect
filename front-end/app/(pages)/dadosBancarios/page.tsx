@@ -41,7 +41,7 @@ const DadosBancarios = ({ ...rest }: any) => {
     async function fetchDados() {
       if (!token) return;
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/dados-bancarios/buscar-dados-bancarios`,
+        `${process.env.NEXT_PUBLIC_API_URL}/dadosBancarios/buscar-dados-bancarios`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -86,7 +86,7 @@ const DadosBancarios = ({ ...rest }: any) => {
     };
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/dados-bancarios/cadastrar-dados-bancarios`,
+        `${process.env.NEXT_PUBLIC_API_URL}/dadosBancarios/cadastrar-dados-bancarios`,
         {
           method: "POST",
           headers: {
@@ -129,11 +129,12 @@ const DadosBancarios = ({ ...rest }: any) => {
   };
 
   const opcoesBanco = [
-    { value: "001", label: "Banco do Brasil" },
-    { value: "237", label: "Bradesco" },
-    { value: "104", label: "Caixa Econômica Federal" },
-    { value: "341", label: "Itaú" },
-    { value: "033", label: "Santander" },
+    { value: "1", label: "Banco do Brasil" },
+    { value: "2", label: "EFÍ Bank" },
+    { value: "3", label: "Bradesco" },
+    { value: "4", label: "Caixa Econômica Federal" },
+    { value: "5", label: "Itaú" },
+    { value: "6", label: "Santander" },
   ];
 
   const opcoesTipoConta = [
