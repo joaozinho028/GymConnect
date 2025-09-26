@@ -22,6 +22,7 @@ import {
   Search,
   Settings,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { FC, useEffect, useState } from "react";
 
@@ -76,9 +77,18 @@ const Header: FC<HeaderProps> = () => {
         <Menu size={26} />
       </button>
       {/* Logo / Título */}
-      <span className="text-black font-semibold text-lg tracking-wide select-none">
-        Gym Connect
-      </span>
+      <div className="flex items-center">
+        <Image
+          src="/image/logo/logo.webp" // Ajuste a extensão para o arquivo correto (.png, .jpg, .svg, etc.)
+          alt="GYM CONNECT Logo"
+          width={30}
+          height={30}
+          className="mr-2"
+        />
+        <span className="text-black font-semibold text-lg tracking-wide select-none">
+          GYM CONNECT
+        </span>
+      </div>
       {/* Menu horizontal só em telas grandes (lg+) */}
       <div className="ml-8 hidden lg:flex items-center gap-6 text-black font-semibold text-sm">
         <Link

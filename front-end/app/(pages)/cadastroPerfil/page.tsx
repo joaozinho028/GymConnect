@@ -25,6 +25,8 @@ const CadastrarPerfis = ({ ...rest }: any) => {
     importacao: false,
     exportacao: false,
     configuracoes: false,
+    precificacao: false,
+    ajuste_fluxo_caixa: false,
   });
   // Permissões dos submenus de configurações
   const [subConfig, setSubConfig] = useState({
@@ -36,6 +38,16 @@ const CadastrarPerfis = ({ ...rest }: any) => {
     perfis: false,
   });
 
+  // Permissões dos submenus de precificação
+  const [subPrecificacao, setSubPrecificacao] = useState({
+    planos: false,
+  });
+
+  // Permissões dos submenus de ajuste fluxo de caixa
+  const [subAjusteFluxo, setSubAjusteFluxo] = useState({
+    categorias: false,
+  });
+
   const schema = yup.object().shape({
     nome: yup.string().required("Preencha o nome do perfil!"),
     filial: yup.string().required("Selecione a filial!"),
@@ -43,22 +55,24 @@ const CadastrarPerfis = ({ ...rest }: any) => {
   const { handleSubmit, ...form } = GetForm(schema);
 
   const onSubmitFunction = async (values: any) => {
-    const permissoes_perfil: {
-      alunos: boolean;
-      filiais: boolean;
-      fluxo_caixa: boolean;
-      importacao: boolean;
-      exportacao: boolean;
-      configuracoes?: typeof subConfig;
-    } = {
+    const permissoes_perfil: any = {
       alunos: modulos.alunos,
       filiais: modulos.filiais,
       fluxo_caixa: modulos.fluxo_caixa,
       importacao: modulos.importacao,
       exportacao: modulos.exportacao,
     };
+
     if (modulos.configuracoes) {
       permissoes_perfil.configuracoes = { ...subConfig };
+    }
+
+    if (modulos.precificacao) {
+      permissoes_perfil.precificacao = { ...subPrecificacao };
+    }
+
+    if (modulos.ajuste_fluxo_caixa) {
+      permissoes_perfil.ajuste_fluxo_caixa = { ...subAjusteFluxo };
     }
 
     const payload = {
@@ -69,14 +83,17 @@ const CadastrarPerfis = ({ ...rest }: any) => {
     console.log("Enviando para o backend:", payload);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/perfis/cadastrar-perfil`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/perfis/cadastrar-perfil`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
       const data = await res.json();
       if (!res.ok) {
         if (res.status === 409) {
@@ -119,6 +136,8 @@ const CadastrarPerfis = ({ ...rest }: any) => {
         importacao: false,
         exportacao: false,
         configuracoes: false,
+        precificacao: false,
+        ajuste_fluxo_caixa: false,
       });
       setSubConfig({
         informacoes_bancarias: false,
@@ -127,6 +146,12 @@ const CadastrarPerfis = ({ ...rest }: any) => {
         historico_usuario: false,
         usuarios: false,
         perfis: false,
+      });
+      setSubPrecificacao({
+        planos: false,
+      });
+      setSubAjusteFluxo({
+        categorias: false,
       });
       if (form.reset) form.reset();
     } catch (err: any) {
@@ -176,7 +201,10 @@ const CadastrarPerfis = ({ ...rest }: any) => {
     { key: "configuracoes", label: "Módulo de Configurações" },
     { key: "importacao", label: "Módulo de Importação" },
     { key: "exportacao", label: "Módulo de Exportação" },
+    { key: "precificacao", label: "Módulo de Precificação" },
+    { key: "ajuste_fluxo_caixa", label: "Ajustes Fluxo de Caixa" },
   ];
+
   const subConfigList = [
     { key: "informacoes_bancarias", label: "Informações bancárias" },
     { key: "plano_gym_connect", label: "Plano Gym Connect" },
@@ -185,6 +213,10 @@ const CadastrarPerfis = ({ ...rest }: any) => {
     { key: "usuarios", label: "Usuários (cadastro e consulta)" },
     { key: "perfis", label: "Perfis (cadastro e consulta)" },
   ];
+
+  const subPrecificacaoList = [{ key: "planos", label: "Planos" }];
+
+  const subAjusteFluxoList = [{ key: "categorias", label: "Categorias" }];
 
   return (
     <div className="p-4 max-w-5xl mx-auto space-y-8">
@@ -248,6 +280,7 @@ const CadastrarPerfis = ({ ...rest }: any) => {
                     />
                     <span className="text-sm text-gray-700">{mod.label}</span>
                   </label>
+
                   {/* Sub-permissões do módulo de Configurações */}
                   {mod.key === "configuracoes" && modulos.configuracoes && (
                     <div className="ml-6 mt-2 space-y-2 border-l pl-4 border-gray-300">
@@ -275,6 +308,71 @@ const CadastrarPerfis = ({ ...rest }: any) => {
                       ))}
                     </div>
                   )}
+
+                  {/* Sub-permissões do módulo de Precificação */}
+                  {mod.key === "precificacao" && modulos.precificacao && (
+                    <div className="ml-6 mt-2 space-y-2 border-l pl-4 border-gray-300">
+                      {subPrecificacaoList.map((sub) => (
+                        <label
+                          key={sub.key}
+                          className="flex items-center text-sm text-gray-600 hover:text-gray-800 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={
+                              subPrecificacao[
+                                sub.key as keyof typeof subPrecificacao
+                              ]
+                            }
+                            onChange={() =>
+                              setSubPrecificacao((prev) => ({
+                                ...prev,
+                                [sub.key]:
+                                  !prev[
+                                    sub.key as keyof typeof subPrecificacao
+                                  ],
+                              }))
+                            }
+                            className="mr-2 h-4 w-4 text-primary"
+                          />
+                          {sub.label}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Sub-permissões do módulo de Ajuste Fluxo de Caixa */}
+                  {mod.key === "ajuste_fluxo_caixa" &&
+                    modulos.ajuste_fluxo_caixa && (
+                      <div className="ml-6 mt-2 space-y-2 border-l pl-4 border-gray-300">
+                        {subAjusteFluxoList.map((sub) => (
+                          <label
+                            key={sub.key}
+                            className="flex items-center text-sm text-gray-600 hover:text-gray-800 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={
+                                subAjusteFluxo[
+                                  sub.key as keyof typeof subAjusteFluxo
+                                ]
+                              }
+                              onChange={() =>
+                                setSubAjusteFluxo((prev) => ({
+                                  ...prev,
+                                  [sub.key]:
+                                    !prev[
+                                      sub.key as keyof typeof subAjusteFluxo
+                                    ],
+                                }))
+                              }
+                              className="mr-2 h-4 w-4 text-primary"
+                            />
+                            {sub.label}
+                          </label>
+                        ))}
+                      </div>
+                    )}
                 </div>
               ))}
             </div>

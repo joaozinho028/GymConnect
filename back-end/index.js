@@ -10,6 +10,7 @@ const alunoRoutes = require("./routes/alunos");
 const auditoriaRoutes = require("./routes/auditoria");
 const precificacaoRoutes = require("./routes/precificacao");
 const dadosBancariosRoutes = require("./routes/dadosBancarios");
+const fluxoCaixaRoutes = require("./routes/fluxoCaixa");
 const supabase = require("./db");
 
 const app = express();
@@ -24,6 +25,7 @@ app.use("/alunos", alunoRoutes);
 app.use("/auditoria", auditoriaRoutes);
 app.use("/precificacao", precificacaoRoutes);
 app.use("/dadosBancarios", dadosBancariosRoutes);
+app.use("/fluxoCaixa", fluxoCaixaRoutes);
 
 app.get("/", (req, res) => {
   res.send("API está rodando.");

@@ -1,5 +1,21 @@
 const supabase = require("../db");
 
+// Função utilitária para gerar descrição detalhada de edições
+function gerarDescricaoEdicao(entidade, antigo, novo) {
+  const alteracoes = [];
+  for (const campo in novo) {
+    if (
+      Object.prototype.hasOwnProperty.call(antigo, campo) &&
+      novo[campo] !== antigo[campo] &&
+      campo !== "criado_em" &&
+      campo !== "atualizado_em"
+    ) {
+      alteracoes.push(`${campo}: "${antigo[campo]}" → "${novo[campo]}"`);
+    }
+  }
+  return `Alteração em ${entidade}: ${alteracoes.join(", ")}`;
+}
+
 const registrarAuditoria = async (
   id_empresa,
   id_usuario,
@@ -16,6 +32,8 @@ const registrarAuditoria = async (
       descricao,
     });
 
+    // Nota: verificamos se a tabela tem a coluna 'descricao'
+    // Se não tiver, o Supabase ignora este campo
     const { data, error } = await supabase
       .from("auditoria")
       .insert([
@@ -25,7 +43,7 @@ const registrarAuditoria = async (
           id_filial,
           acao,
           descricao,
-          data_acao: new Date().toISOString(),
+          criado_em: new Date().toISOString(),
         },
       ])
       .select();
@@ -57,82 +75,35 @@ const consultaAuditoria = async (req, res) => {
 
     let query = supabase
       .from("auditoria")
-      .select(
-        `
-        id_auditoria,
-        acao,
-        descricao,
-        data_acao,
-        id_usuario,
-        id_filial,
-        usuarios(nome_usuario, email_usuario),
-        filiais(nome_filial)
-      `
-      )
-      .eq("id_empresa", id_empresa)
-      .order("data_acao", { ascending: false });
+      .select("*")
+      .eq("id_empresa", id_empresa);
 
-    // Aplicar filtros
-    if (filtro_acao) {
-      query = query.ilike("acao", `%${filtro_acao}%`);
-    }
+    if (filtro_acao) query = query.eq("acao", filtro_acao);
+    if (filtro_usuario) query = query.eq("id_usuario", filtro_usuario);
+    if (data_inicio) query = query.gte("criado_em", data_inicio);
+    if (data_fim) query = query.lte("criado_em", data_fim);
 
-    if (filtro_usuario) {
-      query = query.or(
-        `usuarios.nome_usuario.ilike.%${filtro_usuario}%,usuarios.email_usuario.ilike.%${filtro_usuario}%`
-      );
-    }
-
-    if (data_inicio) {
-      query = query.gte("data_acao", new Date(data_inicio).toISOString());
-    }
-
-    if (data_fim) {
-      const dataFimFormatada = new Date(data_fim);
-      dataFimFormatada.setHours(23, 59, 59, 999);
-      query = query.lte("data_acao", dataFimFormatada.toISOString());
-    }
+    query = query.order("criado_em", { ascending: false });
 
     // Paginação
-    const offset = (page - 1) * limit;
-    query = query.range(offset, offset + limit - 1);
+    const from = (page - 1) * limit;
+    const to = from + Number(limit) - 1;
+    query = query.range(from, to);
 
-    const { data, error, count } = await query;
+    const { data, error } = await query;
 
     if (error) {
-      return res.status(500).json({
-        message: "Erro ao consultar auditoria",
-        error,
-      });
+      return res.status(500).json({ success: false, error });
     }
 
-    // Mapear dados para formato amigável
-    const auditorias = (data || []).map((a) => ({
-      id: a.id_auditoria,
-      acao: a.acao,
-      descricao: a.descricao,
-      data: new Date(a.data_acao).toLocaleString("pt-BR"),
-      usuario: a.usuarios?.nome_usuario || "Usuário não encontrado",
-      email_usuario: a.usuarios?.email_usuario || "",
-      filial: a.filiais?.nome_filial || "Filial não encontrada",
-      timestamp: a.data_acao,
-    }));
-
-    res.json({
-      auditorias,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: count || data?.length || 0,
-      },
-    });
+    return res.json({ success: true, data });
   } catch (err) {
-    console.error("Erro ao consultar auditoria:", err);
-    res.status(500).json({
-      message: "Erro no servidor",
-      error: err?.message,
-    });
+    return res.status(500).json({ success: false, error: err.message });
   }
 };
 
-module.exports = { registrarAuditoria, consultaAuditoria };
+module.exports = {
+  registrarAuditoria,
+  consultaAuditoria,
+  gerarDescricaoEdicao,
+};

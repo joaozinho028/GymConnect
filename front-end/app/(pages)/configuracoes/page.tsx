@@ -11,6 +11,7 @@ import {
   Layers,
   Search,
   Settings2,
+  Settings2Icon,
   UserMinus2,
   UserPlus,
   Users,
@@ -20,6 +21,7 @@ import { useEffect, useState } from "react";
 import CadastrarPerfis from "../cadastroPerfil/page";
 import CadastrarUsuarios from "../cadastroUsuario/page";
 import ConfiguracaoPlanos from "../configuracaoPlanos/page";
+import CadastrarCategoriaFluxo from "../configuracoesFluxoCaixa/categorias/categorias";
 import ConsultaPerfis from "../consultaPerfis/page";
 import ConsultaUsuarios from "../consultaUsuario/page";
 import DadosBancarios from "../dadosBancarios/page";
@@ -55,7 +57,7 @@ export default function FormEditaPerfil() {
       name: "Informações Bancárias",
       icon: CreditCard,
       component: DadosBancarios,
-      permission: "informacoes_bancarias",
+      permission: "configuracoes.informacoes_bancarias",
     },
     // {
     //   name: "Plano Gym Connect",
@@ -73,12 +75,12 @@ export default function FormEditaPerfil() {
       name: "Histórico de Usuários",
       icon: UserMinus2,
       component: HistorioUsuario,
-      permission: "historico_usuario",
+      permission: "configuracoes.historico_usuario",
     },
     {
       name: "Usuários",
       icon: Users,
-      permission: "usuarios",
+      permission: "configuracoes.usuarios",
       submenu: [
         {
           name: "Cadastrar Usuário",
@@ -95,7 +97,7 @@ export default function FormEditaPerfil() {
     {
       name: "Perfil",
       icon: FileText,
-      permission: "perfis",
+      permission: "configuracoes.perfis",
       submenu: [
         {
           name: "Cadastro de Perfil",
@@ -111,9 +113,22 @@ export default function FormEditaPerfil() {
     },
 
     {
+      name: "Ajustes Fluxo de Caixa",
+      icon: Settings2Icon,
+      permission: "ajuste_fluxo_caixa.categorias",
+      submenu: [
+        {
+          name: "Categorias",
+          icon: FilesIcon,
+          component: CadastrarCategoriaFluxo,
+        },
+      ],
+    },
+
+    {
       name: "Precificação",
       icon: DollarSign,
-      // permission: "precificacao",
+      permission: "precificacao.planos",
       submenu: [
         {
           name: "Planos",
@@ -127,10 +142,27 @@ export default function FormEditaPerfil() {
   // Função para verificar se um menu deve ser visível baseado nas permissões
   const hasPermission = (permission?: string): boolean => {
     if (!permission) return true; // Se não tem permissão definida, sempre visível
-    return (
+
+    // Check if the permission has a dot notation for nested permissions
+    if (permission.includes(".")) {
+      const [section, key] = permission.split(".");
+      const sectionValue = permissions[section as keyof typeof permissions];
+
+      // Check if sectionValue is an object before trying to access property
+      if (
+        sectionValue &&
+        typeof sectionValue === "object" &&
+        key in sectionValue
+      ) {
+        return Boolean(sectionValue[key as keyof typeof sectionValue]);
+      }
+      return false;
+    }
+
+    return Boolean(
       permissions.configuracoes?.[
         permission as keyof typeof permissions.configuracoes
-      ] || false
+      ]
     );
   };
 

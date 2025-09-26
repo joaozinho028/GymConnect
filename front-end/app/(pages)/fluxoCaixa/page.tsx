@@ -16,13 +16,12 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import CategoriaPage from "../categoria/categoriaPage";
-import ImportarTransacoesPage from "../transacao/ImportarTransacoesPage";
 import TransacaoPage from "../transacao/TransacaoPage";
 
+// Types
 type Transaction = {
   id: string;
-  date: string; // ISO
+  date: string;
   description: string;
   category: string;
   paymentMethod: string;
@@ -37,7 +36,7 @@ type Category = {
   name: string;
 };
 
-// Meses fixos do ano
+// Constantes
 const MONTHS = [
   "Janeiro",
   "Fevereiro",
@@ -52,11 +51,10 @@ const MONTHS = [
   "Novembro",
   "Dezembro",
 ];
+const filiais = ["Todas", "Filial A", "Filial B", "Filial C"];
+const PIE_COLORS = ["#60a5fa", "#34d399", "#f97316", "#f87171", "#a78bfa"];
 
-// Lista de filiais
-const filiais = ["Filial A", "Filial B", "Filial C"];
-
-// Dados base conhecidos
+// Dados fictícios
 const initialData: Record<
   string,
   { month: string; entrada: number; saida: number }[]
@@ -93,34 +91,44 @@ const initialData: Record<
   ],
 };
 
-// Função para garantir todos os meses
+// Preenche meses faltantes
 const fillMissingMonths = (
   data: { month: string; entrada: number; saida: number }[]
-) => {
-  return MONTHS.map((month) => {
-    const found = data.find((m) => m.month === month);
-    return found || { month, entrada: 0, saida: 0 };
-  });
-};
+) =>
+  MONTHS.map(
+    (month) =>
+      data.find((m) => m.month === month) || { month, entrada: 0, saida: 0 }
+  );
 
-// Dados finais com todos os meses para todas as filiais
+// Junta dados de todas as filiais
 const allCashFlowDataByFilial: Record<
   string,
   { month: string; entrada: number; saida: number }[]
-> = Object.fromEntries(
-  Object.entries(initialData).map(([filial, data]) => [
-    filial,
-    fillMissingMonths(data),
-  ])
-);
+> = {
+  ...Object.fromEntries(
+    Object.entries(initialData).map(([filial, data]) => [
+      filial,
+      fillMissingMonths(data),
+    ])
+  ),
+  Todas: MONTHS.map((month) => {
+    const entrada = Object.values(initialData).reduce(
+      (sum, arr) => sum + (arr.find((m) => m.month === month)?.entrada || 0),
+      0
+    );
+    const saida = Object.values(initialData).reduce(
+      (sum, arr) => sum + (arr.find((m) => m.month === month)?.saida || 0),
+      0
+    );
+    return { month, entrada, saida };
+  }),
+};
 
-// Categorias dinâmicas
+// Categorias e transações fictícias
 const initialCategories: Category[] = [
   { id: "1", name: "Mensalidade" },
   { id: "2", name: "Despesas" },
 ];
-
-// Transações iniciais
 const initialTransactions: Transaction[] = [
   {
     id: "1",
@@ -190,94 +198,75 @@ const initialTransactions: Transaction[] = [
   },
 ];
 
-// Cores do gráfico
-const PIE_COLORS = ["#60a5fa", "#34d399", "#f97316", "#f87171", "#a78bfa"];
+// Funções de exportação/cópia
+function exportToCSV(data: Transaction[]) {
+  if (!data.length) return;
+  const header = [
+    "Data",
+    "Descrição",
+    "Categoria",
+    "Filial",
+    "Tipo",
+    "Pagamento",
+    "Valor",
+  ];
+  const rows = data.map((t) => [
+    t.date,
+    t.description,
+    t.category,
+    t.filial,
+    t.type,
+    t.paymentMethod,
+    t.value,
+  ]);
+  const csvContent = [header, ...rows].map((e) => e.join(",")).join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "transacoes.csv";
+  link.click();
+}
+function exportToExcel() {
+  alert(
+    "Exportação para Excel não implementada. Use uma biblioteca como xlsx."
+  );
+}
+function exportToPDF() {
+  alert("Exportação para PDF não implementada. Use uma biblioteca como jsPDF.");
+}
+function copyTable(data: Transaction[]) {
+  if (!data.length) return;
+  const header = [
+    "Data",
+    "Descrição",
+    "Categoria",
+    "Filial",
+    "Tipo",
+    "Pagamento",
+    "Valor",
+  ];
+  const rows = data.map((t) => [
+    t.date,
+    t.description,
+    t.category,
+    t.filial,
+    t.type,
+    t.paymentMethod,
+    t.value,
+  ]);
+  const tableText = [header, ...rows].map((e) => e.join("\t")).join("\n");
+  navigator.clipboard.writeText(tableText);
+  alert("Tabela copiada para área de transferência!");
+}
 
+// Componente principal
 export default function FluxoCaixaPage() {
-  // Estado para modal de importação
-  const [showImportModal, setShowImportModal] = useState(false);
-  // Funções de exportação e copiar
-  function exportToCSV(data: Transaction[]) {
-    if (!data.length) return;
-    const header = [
-      "Data",
-      "Descrição",
-      "Categoria",
-      "Filial",
-      "Tipo",
-      "Pagamento",
-      "Valor",
-    ];
-    const rows = data.map((t) => [
-      t.date,
-      t.description,
-      t.category,
-      t.filial,
-      t.type,
-      t.paymentMethod,
-      t.value,
-    ]);
-    const csvContent = [header, ...rows].map((e) => e.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "transacoes.csv";
-    link.click();
-  }
-
-  function exportToExcel(data: Transaction[]) {
-    alert(
-      "Exportação para Excel não implementada. Use uma biblioteca como xlsx."
-    );
-  }
-
-  function exportToPDF(data: Transaction[]) {
-    alert(
-      "Exportação para PDF não implementada. Use uma biblioteca como jsPDF."
-    );
-  }
-
-  function copyTable(data: Transaction[]) {
-    if (!data.length) return;
-    const header = [
-      "Data",
-      "Descrição",
-      "Categoria",
-      "Filial",
-      "Tipo",
-      "Pagamento",
-      "Valor",
-    ];
-    const rows = data.map((t) => [
-      t.date,
-      t.description,
-      t.category,
-      t.filial,
-      t.type,
-      t.paymentMethod,
-      t.value,
-    ]);
-    const tableText = [header, ...rows].map((e) => e.join("\t")).join("\n");
-    navigator.clipboard.writeText(tableText);
-    alert("Tabela copiada para área de transferência!");
-  }
   // Estados principais
-  const [selectedFilial, setSelectedFilial] = useState<string>(filiais[0]);
-  const [selectedMonths, setSelectedMonths] = useState<string[]>(["Agosto"]);
-  const [modalidade, setModalidade] = useState<string>("Todos");
-  const [tipoPagamento, setTipoPagamento] = useState<string>("Todos");
-  const [fluxo, setFluxo] = useState<string>("Todos");
-  const [search, setSearch] = useState<string>("");
-  const [dateStart, setDateStart] = useState<string>("");
-  const [dateEnd, setDateEnd] = useState<string>("");
-
-  // CRUD categorias
+  const [selectedFilial, setSelectedFilial] = useState<string>("Todas");
+  const [selectedMonths, setSelectedMonths] = useState<string[]>([
+    MONTHS[new Date().getMonth()],
+  ]);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [editCategory, setEditCategory] = useState<Category | null>(null);
-  const [newCategoryName, setNewCategoryName] = useState("");
-
-  // CRUD transações
   const [transactions, setTransactions] =
     useState<Transaction[]>(initialTransactions);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
@@ -287,13 +276,15 @@ export default function FluxoCaixaPage() {
   const [transactionForm, setTransactionForm] = useState<Transaction | null>(
     null
   );
-
+  const [search, setSearch] = useState<string>("");
   const [page, setPage] = useState(1);
   const pageSize = 6;
   const [sortBy, setSortBy] = useState<"date" | "value">("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [dateStart, setDateStart] = useState<string>("");
+  const [dateEnd, setDateEnd] = useState<string>("");
 
-  // Filtros avançados
+  // Filtros e dados derivados
   const filteredChartData = useMemo(() => {
     const dataForFilial = allCashFlowDataByFilial[selectedFilial] || [];
     return dataForFilial.filter((m) => selectedMonths.includes(m.month));
@@ -302,13 +293,10 @@ export default function FluxoCaixaPage() {
   const filteredTransactions = useMemo(() => {
     return transactions
       .filter((t) => {
-        if (t.filial !== selectedFilial) return false;
+        if (selectedFilial !== "Todas" && t.filial !== selectedFilial)
+          return false;
         if (selectedMonths.length && !selectedMonths.includes(t.month))
           return false;
-        if (modalidade !== "Todos" && t.category !== modalidade) return false;
-        if (tipoPagamento !== "Todos" && t.paymentMethod !== tipoPagamento)
-          return false;
-        if (fluxo !== "Todos" && t.type !== fluxo) return false;
         if (
           search &&
           !(
@@ -317,6 +305,7 @@ export default function FluxoCaixaPage() {
           )
         )
           return false;
+        // Filtro por data
         if (dateStart && t.date < dateStart) return false;
         if (dateEnd && t.date > dateEnd) return false;
         return true;
@@ -334,9 +323,6 @@ export default function FluxoCaixaPage() {
     transactions,
     selectedFilial,
     selectedMonths,
-    modalidade,
-    tipoPagamento,
-    fluxo,
     search,
     sortBy,
     sortDir,
@@ -376,31 +362,6 @@ export default function FluxoCaixaPage() {
     });
   };
 
-  // CRUD Categoria
-  const handleAddCategory = () => {
-    if (!newCategoryName.trim()) return;
-    setCategories([
-      ...categories,
-      { id: Date.now().toString(), name: newCategoryName.trim() },
-    ]);
-    setNewCategoryName("");
-    setShowCategoryModal(false);
-  };
-  const handleEditCategory = () => {
-    if (!editCategory || !newCategoryName.trim()) return;
-    setCategories(
-      categories.map((c) =>
-        c.id === editCategory.id ? { ...c, name: newCategoryName.trim() } : c
-      )
-    );
-    setEditCategory(null);
-    setNewCategoryName("");
-    setShowCategoryModal(false);
-  };
-  const handleDeleteCategory = (id: string) => {
-    setCategories(categories.filter((c) => c.id !== id));
-  };
-
   // CRUD Transação
   const handleOpenTransactionModal = (t?: Transaction) => {
     setEditTransaction(t || null);
@@ -416,7 +377,7 @@ export default function FluxoCaixaPage() {
             type: "entrada",
             value: 0,
             month: MONTHS[new Date().getMonth()],
-            filial: selectedFilial,
+            filial: selectedFilial === "Todas" ? filiais[1] : selectedFilial,
           }
     );
     setShowTransactionModal(true);
@@ -454,28 +415,163 @@ export default function FluxoCaixaPage() {
     setTransactions(transactions.filter((t) => t.id !== id));
   };
 
-  // Opções dinâmicas
-  const opcoesModalidade = [
-    { label: "Todos", value: "Todos" },
-    ...categories.map((c) => ({ label: c.name, value: c.name })),
-  ];
-  const opcoesTipoPagamento = [
-    { label: "Todos", value: "Todos" },
-    { label: "Pix", value: "Pix" },
-    { label: "Dinheiro", value: "Dinheiro" },
-    { label: "Cartão", value: "Cartão" },
-    { label: "Boleto", value: "Boleto" },
-  ];
-  const opcoesFluxo = [
-    { label: "Todos", value: "Todos" },
-    { label: "Entrada", value: "entrada" },
-    { label: "Saída", value: "saida" },
-  ];
+  // async function handleExportPDF() {
+  //   const dashboard = document.getElementById("pdf-dashboard");
+  //   if (!dashboard) {
+  //     alert("Não foi possível encontrar o conteúdo para exportação.");
+  //     return;
+  //   }
 
-  // ...existing code...
+  //   // Garante que o container está visível para captura
+  //   dashboard.style.display = "block";
+
+  //   // Aguarda renderização
+  //   await new Promise((resolve) => setTimeout(resolve, 500));
+
+  //   // Captura imagem do dashboard
+  //   const canvas = await html2canvas(dashboard, { scale: 2 });
+  //   const imgData = canvas.toDataURL("image/png");
+
+  //   // Cria PDF
+  //   const pdf = new jsPDF({
+  //     orientation: "portrait",
+  //     unit: "mm",
+  //     format: "a4",
+  //   });
+
+  //   // Calcula proporção para caber na página
+  //   const pageWidth = pdf.internal.pageSize.getWidth();
+  //   const pageHeight = pdf.internal.pageSize.getHeight();
+  //   const imgProps = pdf.getImageProperties(imgData);
+  //   const pdfWidth = pageWidth - 20;
+  //   const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+  //   // Adiciona imagem ao PDF
+  //   pdf.addImage(imgData, "PNG", 10, 10, pdfWidth, pdfHeight);
+
+  //   // Salva PDF
+  //   pdf.save("relatorio-gymconnect.pdf");
+
+  //   // Esconde novamente o container
+  //   dashboard.style.display = "none";
+  // }
+
+  <div
+    id="pdf-dashboard"
+    style={{
+      position: "absolute",
+      left: "-9999px",
+      top: 0,
+      width: "800px", // largura fixa para o PDF
+      background: "#fff",
+      zIndex: -1,
+      padding: 24,
+    }}
+  >
+    {/* LOGO */}
+    <div style={{ marginBottom: 24 }}>
+      <img
+        src="/logo-gymconnect.png"
+        alt="Logo GymConnect"
+        style={{ height: 60 }}
+      />
+    </div>
+    {/* CARDS */}
+    <div style={{ display: "flex", gap: 16, marginBottom: 24 }}>
+      <div
+        style={{ background: "#d1fae5", padding: 16, borderRadius: 8, flex: 1 }}
+      >
+        <div>Entradas</div>
+        <div style={{ fontWeight: "bold", fontSize: 22 }}>
+          R$ {totalEntrada.toLocaleString()}
+        </div>
+      </div>
+      <div
+        style={{ background: "#fee2e2", padding: 16, borderRadius: 8, flex: 1 }}
+      >
+        <div>Saídas</div>
+        <div style={{ fontWeight: "bold", fontSize: 22 }}>
+          R$ {totalSaida.toLocaleString()}
+        </div>
+      </div>
+      <div
+        style={{
+          background: saldo >= 0 ? "#f0fdf4" : "#fef2f2",
+          padding: 16,
+          borderRadius: 8,
+          flex: 1,
+        }}
+      >
+        <div>Saldo</div>
+        <div style={{ fontWeight: "bold", fontSize: 22 }}>
+          {saldo >= 0 ? "+" : "-"} R$ {Math.abs(saldo).toLocaleString()}
+        </div>
+      </div>
+    </div>
+    {/* GRÁFICOS */}
+    <div style={{ display: "flex", gap: 16, marginBottom: 24 }}>
+      <div style={{ flex: 1 }}>
+        <h3>Fluxo de Caixa</h3>
+        <div
+          id="pdf-bar-chart"
+          style={{ width: 350, height: 220, background: "#fff" }}
+        />
+      </div>
+      <div style={{ flex: 1 }}>
+        <h3>Por Categoria</h3>
+        <div
+          id="pdf-pie-chart"
+          style={{ width: 350, height: 220, background: "#fff" }}
+        />
+      </div>
+    </div>
+    {/* TABELA */}
+    <div>
+      <h3>Transações</h3>
+      <table
+        style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}
+      >
+        <thead>
+          <tr>
+            <th style={{ border: "1px solid #eee", padding: 4 }}>Data</th>
+            <th style={{ border: "1px solid #eee", padding: 4 }}>Descrição</th>
+            <th style={{ border: "1px solid #eee", padding: 4 }}>Categoria</th>
+            <th style={{ border: "1px solid #eee", padding: 4 }}>Filial</th>
+            <th style={{ border: "1px solid #eee", padding: 4 }}>Tipo</th>
+            <th style={{ border: "1px solid #eee", padding: 4 }}>Pagamento</th>
+            <th style={{ border: "1px solid #eee", padding: 4 }}>Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredTransactions.map((t) => (
+            <tr key={t.id}>
+              <td style={{ border: "1px solid #eee", padding: 4 }}>{t.date}</td>
+              <td style={{ border: "1px solid #eee", padding: 4 }}>
+                {t.description}
+              </td>
+              <td style={{ border: "1px solid #eee", padding: 4 }}>
+                {t.category}
+              </td>
+              <td style={{ border: "1px solid #eee", padding: 4 }}>
+                {t.filial}
+              </td>
+              <td style={{ border: "1px solid #eee", padding: 4 }}>{t.type}</td>
+              <td style={{ border: "1px solid #eee", padding: 4 }}>
+                {t.paymentMethod}
+              </td>
+              <td style={{ border: "1px solid #eee", padding: 4 }}>
+                R$ {t.value.toLocaleString()}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>;
+
   return (
     <div className="p-2 sm:p-4 max-w-7xl mx-auto space-y-6">
-      {/* Filial e ações - mobile first */}
+      {/* Filtros principais */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="w-full sm:max-w-xs">
           <label className="block text-sm font-medium mb-1" htmlFor="filial">
@@ -498,114 +594,21 @@ export default function FluxoCaixaPage() {
           <button
             title="Nova Transação"
             className="bg-blue-100 w-full sm:w-auto p-2 rounded hover:bg-blue-200 cursor-pointer text-sm"
-            onClick={() => setShowTransactionModal(true)}
+            onClick={() => handleOpenTransactionModal()}
           >
             Nova Transação
           </button>
           <button
-            title="Categorias"
-            className="bg-gray-100 w-full sm:w-auto p-2 rounded hover:bg-gray-200 cursor-pointer text-sm"
-            onClick={() => setShowCategoryModal(true)}
-          >
-            Categorias
-          </button>
-          <button
-            title="Importar Transações"
-            className="bg-gray-100 w-full sm:w-auto p-2 rounded hover:bg-gray-200 cursor-pointer text-sm"
-            onClick={() => setShowImportModal(true)}
-          >
-            Importar Transações
-          </button>
-          <button
             title="Gerar Relatório"
             className="bg-gray-100 w-full sm:w-auto p-2 rounded hover:bg-gray-200 cursor-pointer flex items-center gap-2 text-sm"
-            onClick={() => console.log("Gerar relatório")}
+            // onClick={handleExportPDF}
           >
             <Copy size={16} /> <span>Gerar Relatório</span>
           </button>
         </div>
       </div>
 
-      {/* Filtros avançados */}
-      <div className="bg-white shadow rounded-lg p-3 sm:p-4 mb-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-6 sm:gap-4 items-center">
-          <div>
-            <label className="text-sm">Data Inicial</label>
-            <input
-              type="date"
-              className="w-full border rounded px-2 py-1"
-              value={dateStart}
-              onChange={(e) => setDateStart(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-sm">Data Final</label>
-            <input
-              type="date"
-              className="w-full border rounded px-2 py-1"
-              value={dateEnd}
-              onChange={(e) => setDateEnd(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-sm">Buscar</label>
-            <input
-              type="text"
-              className="w-full border rounded px-2 py-1"
-              placeholder="Descrição ou categoria"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-sm">Modalidade</label>
-            <select
-              id="modalidade"
-              className="w-full border rounded px-2 py-1"
-              value={modalidade}
-              onChange={(e) => setModalidade(e.target.value)}
-            >
-              {opcoesModalidade.map((opcao) => (
-                <option key={opcao.value} value={opcao.value}>
-                  {opcao.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-sm">Tipo Pagamento</label>
-            <select
-              id="tipoPagamento"
-              className="w-full border rounded px-2 py-1"
-              value={tipoPagamento}
-              onChange={(e) => setTipoPagamento(e.target.value)}
-            >
-              {opcoesTipoPagamento.map((opcao) => (
-                <option key={opcao.value} value={opcao.value}>
-                  {opcao.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-sm">Fluxo</label>
-            <select
-              id="fluxo"
-              className="w-full border rounded px-2 py-1"
-              value={fluxo}
-              onChange={(e) => setFluxo(e.target.value)}
-            >
-              {opcoesFluxo.map((opcao) => (
-                <option key={opcao.value} value={opcao.value}>
-                  {opcao.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Resumo */}
+      {/* Cartões resumo */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         <div className="bg-green-100 text-green-800 shadow rounded-lg p-4">
           <h3 className="text-sm font-medium text-gray-600">
@@ -635,7 +638,7 @@ export default function FluxoCaixaPage() {
         </div>
       </div>
 
-      {/* Meses e exportação */}
+      {/* Seleção de meses */}
       <div className="bg-white shadow rounded-lg p-3 sm:p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
           <div className="flex flex-wrap gap-2 items-center">
@@ -654,7 +657,6 @@ export default function FluxoCaixaPage() {
               </button>
             ))}
           </div>
-          <div className="flex-1" />
         </div>
       </div>
 
@@ -684,7 +686,6 @@ export default function FluxoCaixaPage() {
             </BarChart>
           </ResponsiveContainer>
         </div>
-
         <div className="bg-white shadow rounded-lg p-3 sm:p-4">
           <h2 className="font-semibold mb-4">Gráfico por Categoria</h2>
           <ResponsiveContainer width="100%" height={260}>
@@ -716,7 +717,7 @@ export default function FluxoCaixaPage() {
         </div>
       </div>
 
-      {/* Listagem de transações com busca, exportação e layout customizado */}
+      {/* Extrato de transações */}
       <div className="bg-white shadow rounded-lg p-2 sm:p-4 mt-6">
         <h2 className="font-semibold mb-4">Transações</h2>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 mb-6">
@@ -737,86 +738,65 @@ export default function FluxoCaixaPage() {
                 size={18}
               />
             </div>
-            <select
-              value={selectedFilial}
-              onChange={(e) => {
-                setSelectedFilial(e.target.value);
-                setPage(1);
-              }}
-              className="h-[38px] border border-gray-300 rounded px-2 text-[#222222] bg-white text-sm"
-              style={{ minWidth: 100 }}
-            >
-              {filiais.map((filial) => (
-                <option key={filial} value={filial}>
-                  {filial}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-wrap gap-2 w-full sm:w-1/2 justify-end">
-            <button
-              className="flex items-center gap-2 px-2 py-2 h-[38px] rounded bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs sm:text-sm"
-              onClick={() => exportToCSV(pageItems)}
-              type="button"
-              title="Exportar CSV"
-            >
-              <Copy size={14} /> CSV
-            </button>
-            <button
-              className="flex items-center gap-2 px-2 py-2 h-[38px] rounded bg-green-100 text-green-700 hover:bg-green-200 text-xs sm:text-sm"
-              onClick={() => exportToExcel(pageItems)}
-              type="button"
-              title="Exportar Excel"
-            >
-              <Copy size={14} /> Excel
-            </button>
-            <button
-              className="flex items-center gap-2 px-2 py-2 h-[38px] rounded bg-red-100 text-red-700 hover:bg-red-200 text-xs sm:text-sm"
-              onClick={() => exportToPDF(pageItems)}
-              type="button"
-              title="Exportar PDF"
-            >
-              <Copy size={14} /> PDF
-            </button>
-            <button
-              className="flex items-center gap-2 px-2 py-2 h-[38px] rounded bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs sm:text-sm"
-              onClick={() => copyTable(pageItems)}
-              type="button"
-              title="Copiar tabela"
-            >
-              <Copy size={14} /> Copiar
-            </button>
+            {/* Filtro por data */}
+            <div className="flex gap-2 mt-2">
+              <input
+                type="date"
+                value={dateStart}
+                onChange={(e) => {
+                  setDateStart(e.target.value);
+                  setPage(1);
+                }}
+                className="border rounded px-2 py-1 text-xs sm:text-sm"
+                placeholder="Data inicial"
+                max={dateEnd || undefined}
+              />
+              <span className="text-gray-400 text-xs flex items-center">
+                até
+              </span>
+              <input
+                type="date"
+                value={dateEnd}
+                onChange={(e) => {
+                  setDateEnd(e.target.value);
+                  setPage(1);
+                }}
+                className="border rounded px-2 py-1 text-xs sm:text-sm"
+                placeholder="Data final"
+                min={dateStart || undefined}
+              />
+            </div>
           </div>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto w-full">
           <table
-            className="min-w-full divide-y divide-gray-200 text-xs sm:text-sm"
-            style={{ tableLayout: "fixed", minWidth: 600 }}
+            className="w-full min-w-[700px] sm:min-w-full divide-y divide-gray-200 text-xs sm:text-sm"
+            style={{ tableLayout: "fixed" }}
           >
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-2 py-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase">
                   Ação
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-2 py-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase">
                   Data
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-2 py-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase">
                   Descrição
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-2 py-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase">
                   Categoria
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-2 py-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase">
                   Filial
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-2 py-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase">
                   Tipo
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-2 py-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase">
                   Pagamento
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-2 py-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase">
                   Valor
                 </th>
               </tr>
@@ -839,7 +819,7 @@ export default function FluxoCaixaPage() {
                       className="hover:bg-gray-50"
                       style={{ height: "60px" }}
                     >
-                      <td className="px-4 py-2 flex gap-2">
+                      <td className="px-2 py-2 sm:px-4 flex gap-2">
                         <button
                           title="Editar"
                           className="p-2 rounded cursor-pointer hover:bg-gray-100 text-green-600"
@@ -857,20 +837,19 @@ export default function FluxoCaixaPage() {
                           <Copy size={18} />
                         </button>
                       </td>
-                      <td className="px-4 py-2">{t.date}</td>
-                      <td className="px-4 py-2">{t.description}</td>
-                      <td className="px-4 py-2">{t.category}</td>
-                      <td className="px-4 py-2">{t.filial}</td>
-                      <td className="px-4 py-2">
+                      <td className="px-2 py-2 sm:px-4">{t.date}</td>
+                      <td className="px-2 py-2 sm:px-4">{t.description}</td>
+                      <td className="px-2 py-2 sm:px-4">{t.category}</td>
+                      <td className="px-2 py-2 sm:px-4">{t.filial}</td>
+                      <td className="px-2 py-2 sm:px-4">
                         {t.type === "entrada" ? "Entrada" : "Saída"}
                       </td>
-                      <td className="px-4 py-2">{t.paymentMethod}</td>
-                      <td className="px-4 py-2">
+                      <td className="px-2 py-2 sm:px-4">{t.paymentMethod}</td>
+                      <td className="px-2 py-2 sm:px-4">
                         R$ {t.value.toLocaleString()}
                       </td>
                     </tr>
                   ))}
-                  {/* Preenche linhas vazias para manter 5 linhas fixas */}
                   {Array.from({ length: 5 - pageItems.length }).map(
                     (_, idx) => (
                       <tr key={`empty-${idx}`} style={{ height: "60px" }}>
@@ -906,33 +885,14 @@ export default function FluxoCaixaPage() {
         </div>
       </div>
 
+      {/* Modal de transação */}
       {showTransactionModal && (
         <ModalComponent
-          header="Nova Transação"
+          header={editTransaction ? "Editar Transação" : "Nova Transação"}
           opened={showTransactionModal}
           onClose={() => setShowTransactionModal(false)}
         >
           <TransacaoPage />
-        </ModalComponent>
-      )}
-
-      {showImportModal && (
-        <ModalComponent
-          header="Importar Transações"
-          opened={showImportModal}
-          onClose={() => setShowImportModal(false)}
-        >
-          <ImportarTransacoesPage />
-        </ModalComponent>
-      )}
-
-      {showCategoryModal && (
-        <ModalComponent
-          header="Categorias cadastradas"
-          opened={showCategoryModal}
-          onClose={() => setShowCategoryModal(false)}
-        >
-          <CategoriaPage />
         </ModalComponent>
       )}
     </div>
