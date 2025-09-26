@@ -24,40 +24,69 @@ const salvarDadosBancarios = async (req, res) => {
   try {
     const { id_empresa } = req.user;
     const { banco, agencia, conta, tipo_conta, cpf_cnpj, titular } = req.body;
+
+    // Validação básica
+    if (!banco || !agencia || !conta || !tipo_conta || !cpf_cnpj || !titular) {
+      return res
+        .status(400)
+        .json({ message: "Todos os campos são obrigatórios" });
+    }
+
     // Verifica se já existe
     const { data: existe, error: errorExiste } = await supabase
       .from("dados_bancarios_empresa")
       .select("id_dados_bancarios")
       .eq("id_empresa", id_empresa)
       .maybeSingle();
+
     if (errorExiste) throw errorExiste;
+
+    let resultado;
+
     if (existe) {
-      // Atualiza
-      const { error: updateError } = await supabase
+      // Atualiza - GARANTINDO QUE TODOS OS CAMPOS SEJAM INCLUÍDOS
+      const { data, error } = await supabase
         .from("dados_bancarios_empresa")
         .update({
-          banco,
+          banco: banco, // Certifique-se de que este campo está sendo explicitamente atualizado
           agencia,
           conta,
-          tipo_conta,
+          tipo_conta: tipo_conta, // Certifique-se de que este campo está sendo explicitamente atualizado
           cpf_cnpj,
           titular,
-          atualizado_em: new Date(),
         })
-        .eq("id_empresa", id_empresa);
-      if (updateError) throw updateError;
+        .eq("id_dados_bancarios", existe.id_dados_bancarios)
+        .select();
+
+      if (error) throw error;
+      resultado = data;
     } else {
-      // Insere
-      const { error: insertError } = await supabase
+      // Insere novo - GARANTINDO QUE TODOS OS CAMPOS SEJAM INCLUÍDOS
+      const { data, error } = await supabase
         .from("dados_bancarios_empresa")
-        .insert([
-          { id_empresa, banco, agencia, conta, tipo_conta, cpf_cnpj, titular },
-        ]);
-      if (insertError) throw insertError;
+        .insert({
+          id_empresa,
+          banco: banco, // Certifique-se de que este campo está sendo explicitamente inserido
+          agencia,
+          conta,
+          tipo_conta: tipo_conta, // Certifique-se de que este campo está sendo explicitamente inserido
+          cpf_cnpj,
+          titular,
+        })
+        .select();
+
+      if (error) throw error;
+      resultado = data;
     }
-    res.json({ message: "Dados bancários salvos com sucesso!" });
+
+    console.log("Dados bancários salvos:", resultado);
+
+    res.json({
+      message: "Dados bancários salvos com sucesso!",
+      data: resultado,
+    });
   } catch (err) {
-    console.error(err);
+    console.error("Erro ao salvar dados bancários:", err);
     res.status(500).json({ message: "Erro ao salvar dados bancários." });
   }
 };

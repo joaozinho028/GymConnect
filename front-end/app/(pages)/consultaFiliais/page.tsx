@@ -171,6 +171,12 @@ export default function ConsultaFiliais() {
     page * pageSize
   );
 
+  const atualizarFilialNaLista = (filialEditada: any) => {
+    setFiliais((prev) =>
+      prev.map((f) => (f.id === filialEditada.id ? filialEditada : f))
+    );
+  };
+
   return (
     <div className="p-4 max-w-7xl mx-auto space-y-8">
       <div className="w-full bg-white p-6 rounded-lg shadow-md sm:p-10">
@@ -369,7 +375,21 @@ export default function ConsultaFiliais() {
           hasSaveButton={false}
           classNameBody="!text-md"
         >
-          <EditarFilial filial={filialSelecionada} />
+          <EditarFilial
+            filial={filialSelecionada}
+            onSave={(filialEditada: any) => {
+              atualizarFilialNaLista(filialEditada);
+              setModalOpen(false);
+              Swal.fire({
+                icon: "success",
+                text: "Filial atualizada com sucesso!",
+                timer: 2000,
+                showConfirmButton: false,
+                toast: true,
+                position: "top-end",
+              });
+            }}
+          />
         </ModalComponente>
       </div>
     </div>

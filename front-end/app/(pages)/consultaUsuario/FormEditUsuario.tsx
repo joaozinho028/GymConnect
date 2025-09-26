@@ -116,12 +116,23 @@ const EditarCadastroUsuario = ({ usuario, onSave, ...rest }: any) => {
         });
 
         if (onSave) {
+          // Obter os nomes do perfil e filial selecionados
+          const perfilSelecionado = opcoesPerfil.find(
+            (p) => p.value.toString() === values.perfil
+          );
+
+          const filialSelecionada = opcoesFilial.find(
+            (f) => f.value.toString() === values.filial
+          );
+
           onSave({
             ...usuario,
             nome: values.nome,
             email: values.email,
             id_perfil: values.perfil,
             id_filial: values.filial,
+            perfil: perfilSelecionado?.label || usuario.perfil, // Nome do perfil para exibição
+            filial: filialSelecionada?.label || usuario.filial, // Nome da filial para exibição
             updated_at: new Date().toISOString(),
           });
         }
