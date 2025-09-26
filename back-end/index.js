@@ -8,6 +8,8 @@ const perfilRoutes = require("./routes/perfil");
 const empresaRoutes = require("./routes/empresa");
 const alunoRoutes = require("./routes/alunos");
 const auditoriaRoutes = require("./routes/auditoria");
+const precificacaoRoutes = require("./routes/precificacao");
+const dadosBancariosRoutes = require("./routes/dadosBancarios");
 const supabase = require("./db");
 
 const app = express();
@@ -20,6 +22,8 @@ app.use("/perfis", perfilRoutes);
 app.use("/empresas", empresaRoutes);
 app.use("/alunos", alunoRoutes);
 app.use("/auditoria", auditoriaRoutes);
+app.use("/precificacao", precificacaoRoutes);
+app.use("/dadosBancarios", dadosBancariosRoutes);
 
 app.get("/", (req, res) => {
   res.send("API está rodando.");
