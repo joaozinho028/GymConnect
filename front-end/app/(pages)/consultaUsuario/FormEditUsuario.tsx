@@ -77,19 +77,33 @@ const EditarCadastroUsuario = ({ usuario, onSave, ...rest }: any) => {
 
   const onSubmitFunction = async (values: any) => {
     try {
+      // Lógica corrigida para id_perfil e id_filial
+      let id_perfil_final;
+      let id_filial_final;
+
+      // Para perfil: se foi selecionado um novo valor, usa ele; senão mantém o original
+      if (values.perfil && values.perfil !== "") {
+        id_perfil_final = parseInt(values.perfil);
+      } else {
+        id_perfil_final = usuario.id_perfil;
+      }
+
+      // Para filial: se foi selecionado um novo valor, usa ele; senão mantém o original
+      if (values.filial && values.filial !== "") {
+        id_filial_final = parseInt(values.filial);
+      } else {
+        id_filial_final = usuario.id_filial;
+      }
+
       const body = {
         id_usuario: usuario.id,
         nome_usuario: values.nome,
         email_usuario: values.email,
-        id_perfil:
-          values.perfil && values.perfil !== ""
-            ? parseInt(values.perfil)
-            : usuario.id_perfil || null,
-        id_filial:
-          values.filial && values.filial !== ""
-            ? parseInt(values.filial)
-            : usuario.id_filial || null,
+        id_perfil: id_perfil_final,
+        id_filial: id_filial_final,
       };
+
+      console.log("Dados sendo enviados:", body); // Para debug
 
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/usuarios/editar-usuario`,
@@ -118,21 +132,25 @@ const EditarCadastroUsuario = ({ usuario, onSave, ...rest }: any) => {
         if (onSave) {
           // Obter os nomes do perfil e filial selecionados
           const perfilSelecionado = opcoesPerfil.find(
-            (p) => p.value.toString() === values.perfil
+            (p) =>
+              p.value.toString() ===
+              (values.perfil || usuario.id_perfil.toString())
           );
 
           const filialSelecionada = opcoesFilial.find(
-            (f) => f.value.toString() === values.filial
+            (f) =>
+              f.value.toString() ===
+              (values.filial || usuario.id_filial.toString())
           );
 
           onSave({
             ...usuario,
             nome: values.nome,
             email: values.email,
-            id_perfil: values.perfil,
-            id_filial: values.filial,
-            perfil: perfilSelecionado?.label || usuario.perfil, // Nome do perfil para exibição
-            filial: filialSelecionada?.label || usuario.filial, // Nome da filial para exibição
+            id_perfil: id_perfil_final,
+            id_filial: id_filial_final,
+            perfil: perfilSelecionado?.label || usuario.perfil,
+            filial: filialSelecionada?.label || usuario.filial,
             updated_at: new Date().toISOString(),
           });
         }
