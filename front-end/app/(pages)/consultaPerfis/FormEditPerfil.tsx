@@ -24,8 +24,8 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
     alunos: false,
     filiais: false,
     fluxo_caixa: false,
-    importacao: false,
-    exportacao: false,
+    // importacao: false,
+    // exportacao: false,
     configuracoes: false,
     precificacao: false,
     ajuste_fluxo_caixa: false,
@@ -56,8 +56,8 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
     { key: "filiais", label: "Módulo de Filiais" },
     { key: "fluxo_caixa", label: "Módulo Fluxo de Caixa" },
     { key: "configuracoes", label: "Módulo de Configurações" },
-    { key: "importacao", label: "Módulo de Importação" },
-    { key: "exportacao", label: "Módulo de Exportação" },
+    // { key: "importacao", label: "Módulo de Importação" },
+    // { key: "exportacao", label: "Módulo de Exportação" },
     { key: "precificacao", label: "Módulo de Precificação" },
     { key: "ajuste_fluxo_caixa", label: "Ajustes Fluxo de Caixa" },
   ];
@@ -107,8 +107,8 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
           alunos: permissoes.alunos || false,
           filiais: permissoes.filiais || false,
           fluxo_caixa: permissoes.fluxo_caixa || false,
-          importacao: permissoes.importacao || false,
-          exportacao: permissoes.exportacao || false,
+          // importacao: permissoes.importacao || false,
+          // exportacao: permissoes.exportacao || false,
           configuracoes: permissoes.configuracoes ? true : false,
           precificacao: permissoes.precificacao ? true : false,
           ajuste_fluxo_caixa: permissoes.ajuste_fluxo_caixa ? true : false,
@@ -208,8 +208,8 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
         alunos: modulos.alunos,
         filiais: modulos.filiais,
         fluxo_caixa: modulos.fluxo_caixa,
-        importacao: modulos.importacao,
-        exportacao: modulos.exportacao,
+        // importacao: modulos.importacao,
+        // exportacao: modulos.exportacao,
         configuracoes: modulos.configuracoes
           ? {
               informacoes_bancarias: subConfig.informacoes_bancarias,
@@ -274,10 +274,10 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
           if (modulos.filiais) permissoesFormatadas.push("Módulo Filiais");
           if (modulos.fluxo_caixa)
             permissoesFormatadas.push("Módulo Fluxo De Caixa");
-          if (modulos.importacao)
-            permissoesFormatadas.push("Módulo Importação");
-          if (modulos.exportacao)
-            permissoesFormatadas.push("Módulo Exportação");
+          // if (modulos.importacao)
+          //   permissoesFormatadas.push("Módulo Importação");
+          // if (modulos.exportacao)
+          //   permissoesFormatadas.push("Módulo Exportação");
 
           if (modulos.configuracoes) {
             const subPermissoes = [];
@@ -381,7 +381,7 @@ const EditarCadastroPerfil = ({ perfil, onSave, ...rest }: any) => {
           </div>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className=" h-[20vh] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {modulosList.map((mod) => (
                 <div key={mod.key} className="w-full">
                   <label className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
