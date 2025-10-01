@@ -15,17 +15,21 @@
   "dependencies": {
     "@prisma/client": "^6.12.0",
     "@supabase/supabase-js": "^2.57.4",
+    "axios": "^1.12.2",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "gn-api-sdk-node": "^3.0.4",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
     "node-fetch": "^3.3.2",
+    "nodemailer": "^7.0.6",
     "pg": "^8.16.3",
     "postgres": "^3.4.7",
-    "prisma": "^6.12.0"
+    "prisma": "^6.12.0",
+    "twilio": "^5.10.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
