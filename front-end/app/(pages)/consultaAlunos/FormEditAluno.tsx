@@ -17,7 +17,10 @@ const EditarCadastroAluno = ({ alunoSelecionado, onSave, rest }: any) => {
   const [telefone, setTelefone] = useState("");
   const [cpf, setCpf] = useState("");
   const [plano, setPlano] = useState("");
+  const [filial, setFilial] = useState("");
   const [matricula, setMatricula] = useState("");
+  const [opcoesFilial, setOpcoesFilial] = useState<any[]>([]);
+
   const [yupSchema, setYupSchema] = useState<
     yup.ObjectSchema<{}, yup.AnyObject, {}, "">
   >(yup.object().shape({}));
@@ -27,6 +30,40 @@ const EditarCadastroAluno = ({ alunoSelecionado, onSave, rest }: any) => {
   );
   const formWithSetValue = { ...form, setValue };
 
+  console.log(alunoSelecionado);
+
+  // Buscar filiais
+  useEffect(() => {
+    async function fetchFiliais() {
+      try {
+        const resFilial = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/empresas/listar-filiais`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (resFilial.ok) {
+          const dataFilial = await resFilial.json();
+          setOpcoesFilial(
+            (dataFilial || []).map((f: any) => ({
+              value: f.id_filial ?? f.id,
+              label: f.nome_filial ?? f.nome,
+            }))
+          );
+        } else {
+          console.error("Erro ao buscar filiais:", resFilial.status);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar filiais:", error);
+      }
+    }
+
+    if (token) {
+      fetchFiliais();
+    }
+  }, [token]);
+
   // Preencher os campos quando alunoSelecionado mudar
   useEffect(() => {
     if (alunoSelecionado) {
@@ -35,6 +72,9 @@ const EditarCadastroAluno = ({ alunoSelecionado, onSave, rest }: any) => {
       setTelefone(alunoSelecionado.telefone_aluno || "");
       setCpf(alunoSelecionado.cpf_aluno || "");
       setPlano(alunoSelecionado.plano_aluno || "");
+      setFilial(
+        alunoSelecionado.id_filial ? alunoSelecionado.id_filial.toString() : ""
+      );
 
       // Formatação da data de matrícula se existir
       if (alunoSelecionado.data_cadastro) {
@@ -52,6 +92,9 @@ const EditarCadastroAluno = ({ alunoSelecionado, onSave, rest }: any) => {
         telefone: alunoSelecionado.telefone_aluno || "",
         cpf: alunoSelecionado.cpf_aluno || "",
         plano: alunoSelecionado.plano_aluno || "",
+        filial: alunoSelecionado.id_filial
+          ? alunoSelecionado.id_filial.toString()
+          : "",
         matricula: alunoSelecionado.data_cadastro
           ? new Date(alunoSelecionado.data_cadastro).toISOString().split("T")[0]
           : "",
@@ -75,8 +118,8 @@ const EditarCadastroAluno = ({ alunoSelecionado, onSave, rest }: any) => {
       // Lógica para filial: se o usuário selecionou, usa o selecionado, senão mantém o atual
       const filialFinal =
         values.filial && values.filial !== ""
-          ? values.filial
-          : alunoSelecionado.id_filial || "";
+          ? parseInt(values.filial)
+          : alunoSelecionado.id_filial || null;
 
       const body = {
         id_aluno: alunoSelecionado.id_aluno,
@@ -113,6 +156,11 @@ const EditarCadastroAluno = ({ alunoSelecionado, onSave, rest }: any) => {
         });
 
         if (onSave) {
+          // Encontrar o nome da filial selecionada para exibição
+          const filialSelecionada = opcoesFilial.find(
+            (f) => f.value.toString() === values.filial
+          );
+
           onSave({
             ...alunoSelecionado,
             nome_aluno: values.nome,
@@ -121,6 +169,7 @@ const EditarCadastroAluno = ({ alunoSelecionado, onSave, rest }: any) => {
             email_aluno: values.email,
             plano_aluno: planoFinal,
             id_filial: filialFinal,
+            filial: filialSelecionada?.label || alunoSelecionado.filial, // Nome da filial para exibição
             matricula_aluno: values.matricula,
             updated_at: new Date().toISOString(),
           });
@@ -227,12 +276,12 @@ const EditarCadastroAluno = ({ alunoSelecionado, onSave, rest }: any) => {
             />
 
             <InputSelectComponent
-              label="filial"
+              label="Filial"
               name="filial"
               formulario={formWithSetValue}
-              value={plano}
-              onChange={(e) => setPlano(e.target.value)}
-              options={opcoesPlano}
+              value={filial}
+              onChange={(e) => setFilial(e.target.value)}
+              options={opcoesFilial}
               width="w-full"
             />
           </div>

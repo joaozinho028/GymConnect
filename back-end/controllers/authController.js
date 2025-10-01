@@ -15,13 +15,20 @@ const login = async (req, res) => {
     const { data: userData, error: userError } = await supabase
       .from("usuarios")
       .select(
-        "id_usuario, nome_usuario, id_empresa, email_usuario, senha_usuario, id_filial, id_perfil"
+        "id_usuario, nome_usuario, id_empresa, email_usuario, senha_usuario, id_filial, id_perfil, status_usuario"
       )
       .eq("email_usuario", email)
       .single();
 
     if (userError || !userData) {
       return res.status(401).json({ message: "Credenciais inválidas" });
+    }
+
+    // Verificar se o usuário está ativo
+    if (!userData.status_usuario) {
+      return res.status(401).json({
+        message: "Usuário inativo, sem permissão para acessar o sistema!",
+      });
     }
 
     const senhaValida = await bcrypt.compare(senha, userData.senha_usuario);
@@ -31,7 +38,7 @@ const login = async (req, res) => {
 
     const { data: perfilData, error: perfilError } = await supabase
       .from("perfis")
-      .select("permissoes_perfil")
+      .select("permissoes_perfil, status_perfil")
       .eq("id_perfil", userData.id_perfil)
       .single();
 
@@ -42,6 +49,14 @@ const login = async (req, res) => {
       return res
         .status(500)
         .json({ message: "Erro ao buscar permissões do perfil" });
+    }
+
+    // Verificar se o perfil está ativo
+    if (!perfilData.status_perfil) {
+      return res.status(401).json({
+        message:
+          "Perfil de acesso inativo. Entre em contato com o administrador.",
+      });
     }
 
     const permissoes = perfilData?.permissoes_perfil || {

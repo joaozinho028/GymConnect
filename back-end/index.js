@@ -22,7 +22,7 @@ app.use("/usuarios", usuarioRoutes);
 app.use("/perfis", perfilRoutes);
 app.use("/empresas", empresaRoutes);
 app.use("/alunos", alunoRoutes);
-app.use("/auditoria", auditoriaRoutes);
+app.use("/api/auditoria", auditoriaRoutes);
 app.use("/precificacao", precificacaoRoutes);
 app.use("/dadosBancarios", dadosBancariosRoutes);
 app.use("/fluxoCaixa", fluxoCaixaRoutes);
