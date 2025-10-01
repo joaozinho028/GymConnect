@@ -7,8 +7,8 @@ interface Permissoes {
   alunos: boolean;
   filiais: boolean;
   fluxo_caixa: boolean;
-  importacao: boolean;
-  exportacao: boolean;
+  // importacao: boolean;
+  // exportacao: boolean;
   configuracoes?: {
     informacoes_bancarias: boolean;
     plano_gym_connect: boolean;
@@ -46,8 +46,8 @@ export const usePermissions = () => {
         alunos: false,
         filiais: false,
         fluxo_caixa: false,
-        importacao: false,
-        exportacao: false,
+        // importacao: false,
+        // exportacao: false,
         configuracoes: {
           informacoes_bancarias: false,
           plano_gym_connect: false,
@@ -81,8 +81,8 @@ export const usePermissions = () => {
         alunos: false,
         filiais: false,
         fluxo_caixa: false,
-        importacao: false,
-        exportacao: false,
+        // importacao: false,
+        // exportacao: false,
       };
 
       return {
@@ -108,8 +108,8 @@ export const usePermissions = () => {
         alunos: false,
         filiais: false,
         fluxo_caixa: false,
-        importacao: false,
-        exportacao: false,
+        // importacao: false,
+        // exportacao: false,
         configuracoes: {
           informacoes_bancarias: false,
           plano_gym_connect: false,
