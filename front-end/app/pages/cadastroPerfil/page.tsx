@@ -22,8 +22,8 @@ const CadastrarPerfis = ({ ...rest }: any) => {
     alunos: false,
     filiais: false,
     fluxo_caixa: false,
-    importacao: false,
-    exportacao: false,
+    // importacao: false,
+    // exportacao: false,
     configuracoes: false,
     precificacao: false,
     ajuste_fluxo_caixa: false,
@@ -59,8 +59,8 @@ const CadastrarPerfis = ({ ...rest }: any) => {
       alunos: modulos.alunos,
       filiais: modulos.filiais,
       fluxo_caixa: modulos.fluxo_caixa,
-      importacao: modulos.importacao,
-      exportacao: modulos.exportacao,
+      // importacao: modulos.importacao,
+      // exportacao: modulos.exportacao,
     };
 
     if (modulos.configuracoes) {
@@ -133,8 +133,8 @@ const CadastrarPerfis = ({ ...rest }: any) => {
         alunos: false,
         filiais: false,
         fluxo_caixa: false,
-        importacao: false,
-        exportacao: false,
+        // importacao: false,
+        // exportacao: false,
         configuracoes: false,
         precificacao: false,
         ajuste_fluxo_caixa: false,
@@ -199,8 +199,8 @@ const CadastrarPerfis = ({ ...rest }: any) => {
     { key: "filiais", label: "Módulo de Filiais" },
     { key: "fluxo_caixa", label: "Módulo Fluxo de Caixa" },
     { key: "configuracoes", label: "Módulo de Configurações" },
-    { key: "importacao", label: "Módulo de Importação" },
-    { key: "exportacao", label: "Módulo de Exportação" },
+    // { key: "importacao", label: "Módulo de Importação" },
+    // { key: "exportacao", label: "Módulo de Exportação" },
     { key: "precificacao", label: "Módulo de Precificação" },
     { key: "ajuste_fluxo_caixa", label: "Ajustes Fluxo de Caixa" },
   ];
