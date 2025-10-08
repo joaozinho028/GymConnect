@@ -471,28 +471,28 @@ const importarAlunos = async (req, res) => {
         pix: "pix",
 
         // Boleto
-        boleto: "boleto",
+        boleto: "boleto", 
 
-        // Cartão de Crédito - TODAS as variações possíveis
-        cartão: "cartão de crédito",
-        cartao: "cartão de crédito",
-        "cartão de credito": "cartão de crédito",
-        "cartão de crédito": "cartão de crédito",
-        "cartao de credito": "cartão de crédito", // ← Esta linha estava faltando!
-        "cartao de crédito": "cartão de crédito",
-        credito: "cartão de crédito",
-        crédito: "cartão de crédito",
-        credit: "cartão de crédito",
-        card: "cartão de crédito",
+        // Cartão de Crédito - TODAS as variações para "credito"
+        cartão: "credito",
+        cartao: "credito",
+        "cartão de credito": "credito",
+        "cartão de crédito": "credito", 
+        "cartao de credito": "credito",
+        "cartao de crédito": "credito",
+        credito: "credito",
+        crédito: "credito",
+        credit: "credito",
+        card: "credito",
 
-        // Cartão de Débito - TODAS as variações possíveis
-        "cartão de debito": "cartão de débito",
-        "cartão de débito": "cartão de débito",
-        "cartao de debito": "cartão de débito", // ← Adicionar esta também
-        "cartao de débito": "cartão de débito",
-        debito: "cartão de débito",
-        débito: "cartão de débito",
-        debit: "cartão de débito",
+        // Cartão de Débito - TODAS as variações para "debito"
+        "cartão de debito": "debito",
+        "cartão de débito": "debito",
+        "cartao de debito": "debito", 
+        "cartao de débito": "debito",
+        debito: "debito",
+        débito: "debito",
+        debit: "debito",
       };
 
       const formaLimpa = forma.toLowerCase().trim();
@@ -502,7 +502,7 @@ const importarAlunos = async (req, res) => {
         `Normalizando: "${forma}" → "${formaLimpa}" → "${resultado || forma}"`
       );
 
-      return resultado || forma; // Retorna original se não encontrar
+      return resultado || forma;
     };
 
     // Processar cada aluno
@@ -574,9 +574,9 @@ const importarAlunos = async (req, res) => {
         // Valores válidos conforme constraint do banco
         const formasPagamentoValidas = [
           "pix",
-          "boleto",
-          "credito", // ← SEM "cartão de"
-          "debito", // ← SEM "cartão de"
+          "boleto", 
+          "credito", // ← Manter assim
+          "debito",  // ← Manter assim
         ];
 
         const formaPagamentoLimpa = normalizarFormaPagamento(

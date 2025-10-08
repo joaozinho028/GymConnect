@@ -37,9 +37,9 @@ const ImportarAlunos = () => {
     const csvContent =
       "nome_aluno,email_aluno,telefone_aluno,cpf_aluno,plano_aluno,forma_pagamento\n" +
       "João Silva,joao.silva@email.com,11999999999,12345678909,mensal,pix\n" +
-      "Maria Santos,maria.santos@email.com,11888888888,98765432100,trimestral,cartão de crédito\n" +
+      "Maria Santos,maria.santos@email.com,11888888888,98765432100,trimestral,credito\n" +
       "Pedro Oliveira,pedro.oliveira@email.com,11777777777,11122233344,anual,boleto\n" +
-      "Ana Costa,ana.costa@email.com,11666665555,55566677788,semestral,cartão de débito";
+      "Ana Costa,ana.costa@email.com,11666665555,55566677788,semestral,debito";
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
@@ -218,30 +218,26 @@ const ImportarAlunos = () => {
           } else {
             const formasValidas = [
               "pix",
-              "boleto",
-              "cartão",
-              "cartao",
-              "cartão de crédito",
-              "cartão de credito",
-              "cartao de credito",
-              "cartao de crédito",
+              "boleto", 
               "credito",
               "crédito",
+              "debito", 
+              "débito",
+              // Manter algumas variações comuns para compatibilidade
+              "cartão de crédito",
+              "cartão de credito", 
+              "cartao de credito",
               "cartão de débito",
               "cartão de debito",
               "cartao de debito",
-              "cartao de débito",
-              "debito",
-              "débito",
             ];
-            const formaNormalizada = dadosLinha.forma_pagamento
-              .toLowerCase()
-              .trim();
+            
+            const formaNormalizada = dadosLinha.forma_pagamento.toLowerCase().trim();
             if (!formasValidas.includes(formaNormalizada)) {
               erros.push(
                 `Linha ${i + 1}: Forma de pagamento "${
                   dadosLinha.forma_pagamento
-                }" é inválida. Use: pix, boleto, cartão de crédito, cartão de débito`
+                }" é inválida. Use: pix, boleto, credito, debito`
               );
             }
           }

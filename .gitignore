@@ -28,6 +28,8 @@ Thumbs.db
 # Front-end specific
 front-end/.next/
 front-end/node_modules/
+front-end/out/
+
 # front-end/.env*
 
 # Back-end specific
