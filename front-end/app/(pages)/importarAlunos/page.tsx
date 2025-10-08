@@ -218,21 +218,23 @@ const ImportarAlunos = () => {
           } else {
             const formasValidas = [
               "pix",
-              "boleto", 
+              "boleto",
               "credito",
               "crédito",
-              "debito", 
+              "debito",
               "débito",
               // Manter algumas variações comuns para compatibilidade
               "cartão de crédito",
-              "cartão de credito", 
+              "cartão de credito",
               "cartao de credito",
               "cartão de débito",
               "cartão de debito",
               "cartao de debito",
             ];
-            
-            const formaNormalizada = dadosLinha.forma_pagamento.toLowerCase().trim();
+
+            const formaNormalizada = dadosLinha.forma_pagamento
+              .toLowerCase()
+              .trim();
             if (!formasValidas.includes(formaNormalizada)) {
               erros.push(
                 `Linha ${i + 1}: Forma de pagamento "${

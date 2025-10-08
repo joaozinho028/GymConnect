@@ -471,13 +471,13 @@ const importarAlunos = async (req, res) => {
         pix: "pix",
 
         // Boleto
-        boleto: "boleto", 
+        boleto: "boleto",
 
         // Cartão de Crédito - TODAS as variações para "credito"
         cartão: "credito",
         cartao: "credito",
         "cartão de credito": "credito",
-        "cartão de crédito": "credito", 
+        "cartão de crédito": "credito",
         "cartao de credito": "credito",
         "cartao de crédito": "credito",
         credito: "credito",
@@ -488,7 +488,7 @@ const importarAlunos = async (req, res) => {
         // Cartão de Débito - TODAS as variações para "debito"
         "cartão de debito": "debito",
         "cartão de débito": "debito",
-        "cartao de debito": "debito", 
+        "cartao de debito": "debito",
         "cartao de débito": "debito",
         debito: "debito",
         débito: "debito",
@@ -574,9 +574,9 @@ const importarAlunos = async (req, res) => {
         // Valores válidos conforme constraint do banco
         const formasPagamentoValidas = [
           "pix",
-          "boleto", 
+          "boleto",
           "credito", // ← Manter assim
-          "debito",  // ← Manter assim
+          "debito", // ← Manter assim
         ];
 
         const formaPagamentoLimpa = normalizarFormaPagamento(
