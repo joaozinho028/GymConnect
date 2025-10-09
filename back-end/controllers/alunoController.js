@@ -2,6 +2,45 @@ const supabase = require("../db");
 const auditoriaService = require("../utils/auditoriaService");
 const { validarCPF, validarEmail, limparCPF } = require("../utils/validadores");
 
+// Função para registrar auditoria de alunos
+const registrarAuditoria = async (
+  id_empresa,
+  id_usuario,
+  id_filial,
+  acao,
+  descricao
+) => {
+  try {
+    const { data, error } = await supabase.from("auditoria").insert([
+      {
+        id_empresa,
+        id_usuario,
+        id_filial,
+        acao,
+        descricao,
+        data_acao: new Date().toISOString(),
+      },
+    ]);
+
+    if (error) {
+      console.error("Erro ao registrar auditoria:", error);
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    console.error("Erro ao registrar auditoria:", error);
+    return { success: false, error };
+  }
+};
+
+// Função auxiliar para formatar CPF para auditoria
+const formatarCPFParaAuditoria = (cpf) => {
+  if (!cpf) return "";
+  const cpfLimpo = cpf.replace(/[^\d]/g, '');
+  return cpfLimpo.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+};
+
 // Função para gerar matrícula única de 5 dígitos
 const gerarMatriculaUnica = async (id_empresa, id_filial) => {
   let tentativas = 0;
@@ -44,7 +83,7 @@ const cadastrarAluno = async (req, res) => {
       forma_pagamento,
     } = req.body;
 
-    const { id_empresa, id_filial } = req.user;
+    const { id_empresa, id_filial, id_usuario } = req.user;
 
     // Validação dos campos obrigatórios
     if (
@@ -60,11 +99,20 @@ const cadastrarAluno = async (req, res) => {
         .json({ error: "Todos os campos são obrigatórios" });
     }
 
+    // Limpar CPF antes de validar e salvar
+    const cpfLimpo = limparCPF(cpf_aluno);
+    
+    // Validar CPF
+    const validacaoCPF = validarCPF(cpf_aluno);
+    if (!validacaoCPF.valido) {
+      return res.status(400).json({ error: validacaoCPF.erro });
+    }
+
     // Verificar se CPF já existe na mesma filial
     const { data: alunoExistente } = await supabase
       .from("alunos")
       .select("cpf_aluno")
-      .eq("cpf_aluno", cpf_aluno)
+      .eq("cpf_aluno", cpfLimpo)
       .eq("id_empresa", id_empresa)
       .eq("id_filial", id_filial)
       .single();
@@ -98,7 +146,7 @@ const cadastrarAluno = async (req, res) => {
             nome_aluno,
             email_aluno,
             telefone_aluno,
-            cpf_aluno,
+            cpf_aluno: cpfLimpo,
             plano_aluno,
             matricula_aluno,
             forma_pagamento,
@@ -140,6 +188,18 @@ const cadastrarAluno = async (req, res) => {
         console.error("Erro ao registrar transação:", erroTransacao);
       }
 
+      // Registrar auditoria do cadastro
+      const cpfFormatado = formatarCPFParaAuditoria(cpfLimpo);
+      const descricaoAuditoria = `Cadastrou o aluno: ${nome_aluno} (CPF: ${cpfFormatado}, Matrícula: ${matricula_aluno}). Plano: ${plano_aluno}, Forma de pagamento: ${forma_pagamento}, Situação: aguardando pagamento`;
+      
+      await registrarAuditoria(
+        id_empresa,
+        id_usuario,
+        id_filial,
+        "CADASTRO_ALUNO",
+        descricaoAuditoria
+      );
+
       dadosResposta = {
         message:
           "Aluno cadastrado com sucesso! Aguardando pagamento do boleto.",
@@ -178,7 +238,7 @@ const cadastrarAluno = async (req, res) => {
               nome_aluno,
               email_aluno,
               telefone_aluno,
-              cpf_aluno,
+              cpf_aluno: cpfLimpo,
               plano_aluno,
               matricula_aluno,
               forma_pagamento,
@@ -215,6 +275,18 @@ const cadastrarAluno = async (req, res) => {
           ])
           .select()
           .single();
+
+        // Registrar auditoria do cadastro com pagamento aprovado
+        const cpfFormatado = formatarCPFParaAuditoria(cpfLimpo);
+        const descricaoAuditoria = `Cadastrou o aluno: ${nome_aluno} (CPF: ${cpfFormatado}, Matrícula: ${matricula_aluno}). Plano: ${plano_aluno}, Forma de pagamento: ${forma_pagamento}, Situação: regular - Pagamento aprovado`;
+        
+        await registrarAuditoria(
+          id_empresa,
+          id_usuario,
+          id_filial,
+          "CADASTRO_ALUNO",
+          descricaoAuditoria
+        );
 
         dadosResposta = {
           message: "Pagamento aprovado! Aluno cadastrado com sucesso.",
@@ -375,7 +447,7 @@ const obterEstatisticasAlunos = async (req, res) => {
 
 const editarAlunos = async (req, res) => {
   try {
-    const { id_empresa, id_filial } = req.user;
+    const { id_empresa, id_filial, id_usuario } = req.user;
     const {
       id_aluno,
       nome_aluno,
@@ -383,21 +455,52 @@ const editarAlunos = async (req, res) => {
       telefone_aluno,
       cpf_aluno,
       plano_aluno,
-      // Adicione outros campos que desejar permitir edição
     } = req.body;
 
     if (!id_aluno) {
       return res.status(400).json({ message: "ID do aluno é obrigatório." });
     }
 
-    // Atualizar aluno apenas da empresa e filial do usuário autenticado
+    // Buscar dados atuais do aluno para auditoria
+    const { data: alunoAtual, error: errorBuscaAtual } = await supabase
+      .from("alunos")
+      .select(`
+        nome_aluno, 
+        email_aluno, 
+        telefone_aluno, 
+        cpf_aluno, 
+        plano_aluno,
+        matricula_aluno
+      `)
+      .eq("id_aluno", id_aluno)
+      .eq("id_empresa", id_empresa)
+      .eq("id_filial", id_filial)
+      .single();
+
+    if (errorBuscaAtual || !alunoAtual) {
+      return res.status(404).json({
+        message: "Aluno não encontrado ou não pertence a esta empresa/filial.",
+      });
+    }
+
+    // Limpar CPF se fornecido
+    let cpfLimpo = cpf_aluno;
+    if (cpf_aluno) {
+      const validacaoCPF = validarCPF(cpf_aluno);
+      if (!validacaoCPF.valido) {
+        return res.status(400).json({ error: validacaoCPF.erro });
+      }
+      cpfLimpo = validacaoCPF.cpfLimpo;
+    }
+
+    // Atualizar aluno
     const { error } = await supabase
       .from("alunos")
       .update({
         nome_aluno,
         email_aluno,
         telefone_aluno,
-        cpf_aluno,
+        cpf_aluno: cpfLimpo,
         plano_aluno,
         atualizado_em: new Date().toISOString(),
       })
@@ -408,6 +511,45 @@ const editarAlunos = async (req, res) => {
     if (error) {
       console.error("Erro ao editar aluno:", error);
       return res.status(500).json({ message: "Erro ao editar aluno." });
+    }
+
+    // Preparar auditoria das alterações
+    const alteracoes = [];
+    
+    if (nome_aluno && alunoAtual.nome_aluno !== nome_aluno) {
+      alteracoes.push(`Nome: '${alunoAtual.nome_aluno}' → '${nome_aluno}'`);
+    }
+    
+    if (email_aluno && alunoAtual.email_aluno !== email_aluno) {
+      alteracoes.push(`Email: '${alunoAtual.email_aluno}' → '${email_aluno}'`);
+    }
+    
+    if (telefone_aluno && alunoAtual.telefone_aluno !== telefone_aluno) {
+      alteracoes.push(`Telefone: '${alunoAtual.telefone_aluno}' → '${telefone_aluno}'`);
+    }
+    
+    if (cpfLimpo && alunoAtual.cpf_aluno !== cpfLimpo) {
+      const cpfAnterior = formatarCPFParaAuditoria(alunoAtual.cpf_aluno);
+      const cpfNovo = formatarCPFParaAuditoria(cpfLimpo);
+      alteracoes.push(`CPF: '${cpfAnterior}' → '${cpfNovo}'`);
+    }
+    
+    if (plano_aluno && alunoAtual.plano_aluno !== plano_aluno) {
+      alteracoes.push(`Plano: '${alunoAtual.plano_aluno}' → '${plano_aluno}'`);
+    }
+
+    // Registrar auditoria da edição
+    if (alteracoes.length > 0) {
+      const cpfFormatado = formatarCPFParaAuditoria(alunoAtual.cpf_aluno);
+      const descricaoAuditoria = `Editou o aluno: ${alunoAtual.nome_aluno} (CPF: ${cpfFormatado}, Matrícula: ${alunoAtual.matricula_aluno}). Alterações: ${alteracoes.join(', ')}`;
+      
+      await registrarAuditoria(
+        id_empresa,
+        id_usuario,
+        id_filial,
+        "EDICAO_ALUNO",
+        descricaoAuditoria
+      );
     }
 
     res.json({ message: "Aluno atualizado com sucesso!" });
@@ -458,6 +600,16 @@ const importarAlunos = async (req, res) => {
         error: "Lista de alunos não pode estar vazia",
       });
     }
+
+    // Buscar nome da filial para auditoria
+    const { data: dadosFilial, error: errorFilial } = await supabase
+      .from("filiais")
+      .select("nome_filial")
+      .eq("id_filial", id_filial)
+      .eq("id_empresa", id_empresa)
+      .single();
+
+    const nomeFilial = dadosFilial?.nome_filial || `Filial ${id_filial}`;
 
     let sucesso = 0;
     let erros = 0;
@@ -743,35 +895,12 @@ const importarAlunos = async (req, res) => {
 
         console.log(`Aluno inserido com sucesso linha ${linha}:`, novoAluno);
 
-        // Auditoria (opcional)
-        try {
-          if (auditoriaService && auditoriaService.registrarAcao) {
-            await auditoriaService.registrarAcao(
-              id_usuario,
-              "CREATE",
-              "alunos",
-              novoAluno.id_aluno,
-              {
-                aluno_importado: true,
-                linha_arquivo: linha,
-                dados_originais: {
-                  nome_aluno: alunoData.nome_aluno,
-                  email_aluno: alunoData.email_aluno,
-                  cpf_aluno: alunoData.cpf_aluno,
-                },
-              },
-              id_empresa
-            );
-          }
-        } catch (auditoriaError) {
-          console.error("Erro ao registrar auditoria:", auditoriaError);
-        }
-
         alunosImportados.push({
           id_aluno: novoAluno.id_aluno,
           nome_aluno: novoAluno.nome_aluno,
           email_aluno: novoAluno.email_aluno,
           matricula_aluno: novoAluno.matricula_aluno,
+          cpf_aluno: formatarCPFParaAuditoria(novoAluno.cpf_aluno),
           linha,
         });
 
@@ -790,12 +919,25 @@ const importarAlunos = async (req, res) => {
       }
     }
 
+    // Registrar auditoria da importação
+    if (sucesso > 0) {
+      const descricaoAuditoria = `Importou ${sucesso} aluno(s) na filial: ${nomeFilial}. Total processado: ${alunos.length} registros${erros > 0 ? `, ${erros} erro(s)` : ''}`;
+      
+      await registrarAuditoria(
+        id_empresa,
+        id_usuario,
+        id_filial,
+        "IMPORTACAO_ALUNOS",
+        descricaoAuditoria
+      );
+    }
+
     // Resposta final
     const response = {
       success: sucesso > 0,
       message:
         sucesso > 0
-          ? `Importação concluída: ${sucesso} aluno(s) importado(s)${
+          ? `Importação concluída: ${sucesso} aluno(s) importado(s) na filial ${nomeFilial}${
               erros > 0 ? `, ${erros} erro(s)` : ""
             }`
           : "Nenhum aluno foi importado com sucesso",
@@ -803,6 +945,7 @@ const importarAlunos = async (req, res) => {
         total_processados: alunos.length,
         sucesso,
         erros,
+        filial: nomeFilial,
         detalhes: errosDetalhados.length > 0 ? errosDetalhados : undefined,
         alunos_importados: alunosImportados,
       },
@@ -821,6 +964,91 @@ const importarAlunos = async (req, res) => {
   }
 };
 
+// Função para alternar status do aluno (ativar/inativar)
+const alterarStatusAluno = async (req, res) => {
+  try {
+    const { id_aluno, status_aluno } = req.body;
+    const { id_empresa, id_filial, id_usuario } = req.user;
+
+    if (!id_aluno || typeof status_aluno !== "boolean") {
+      return res.status(400).json({ 
+        message: "ID do aluno e status são obrigatórios." 
+      });
+    }
+
+    // Buscar dados atuais do aluno para auditoria
+    const { data: alunoAtual, error: errorBusca } = await supabase
+      .from("alunos")
+      .select("nome_aluno, cpf_aluno, matricula_aluno")
+      .eq("id_aluno", id_aluno)
+      .eq("id_empresa", id_empresa)
+      .eq("id_filial", id_filial)
+      .single();
+
+    if (errorBusca || !alunoAtual) {
+      return res.status(404).json({ 
+        message: "Aluno não encontrado." 
+      });
+    }
+
+    // Atualizar status do aluno
+    const { data, error } = await supabase
+      .from("alunos")
+      .update({ 
+        status_aluno,
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq("id_aluno", id_aluno)
+      .eq("id_empresa", id_empresa)
+      .eq("id_filial", id_filial)
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(500).json({
+        message: "Erro ao alterar status do aluno.",
+        error,
+      });
+    }
+
+    if (!data) {
+      return res.status(404).json({
+        message: "Aluno não encontrado.",
+      });
+    }
+
+    // Registrar auditoria da alteração de status
+    const acao = status_aluno ? "ATIVACAO_ALUNO" : "INATIVACAO_ALUNO";
+    const statusTexto = status_aluno ? "Ativou" : "Inativou";
+    const cpfFormatado = formatarCPFParaAuditoria(alunoAtual.cpf_aluno);
+    const descricaoAuditoria = `${statusTexto} o aluno: ${alunoAtual.nome_aluno} (CPF: ${cpfFormatado}, Matrícula: ${alunoAtual.matricula_aluno})`;
+
+    await registrarAuditoria(
+      id_empresa,
+      id_usuario,
+      id_filial,
+      acao,
+      descricaoAuditoria
+    );
+
+    return res.status(200).json({
+      message: `Status do aluno ${status_aluno ? 'ativado' : 'inativado'} com sucesso!`,
+      aluno: {
+        id: data.id_aluno,
+        nome: data.nome_aluno,
+        status: data.status_aluno,
+        matricula: data.matricula_aluno,
+      },
+    });
+  } catch (error) {
+    console.error("Erro ao alterar status do aluno:", error);
+    return res.status(500).json({
+      message: "Erro interno do servidor.",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   cadastrarAluno,
   consultarAlunos,
@@ -830,4 +1058,5 @@ module.exports = {
   obterEstatisticasAlunos,
   editarAlunos,
   importarAlunos,
+  alterarStatusAluno, // Nova função
 };
