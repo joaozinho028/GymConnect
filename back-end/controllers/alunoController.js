@@ -196,7 +196,7 @@ const cadastrarAluno = async (req, res) => {
         id_empresa,
         id_usuario,
         id_filial,
-        "CADASTRO_ALUNO",
+        "Cadastrou Aluno",
         descricaoAuditoria
       );
 
@@ -937,7 +937,7 @@ const importarAlunos = async (req, res) => {
         id_empresa,
         id_usuario,
         id_filial,
-        "IMPORTACAO_ALUNOS",
+        "Edição perfil",
         descricaoAuditoria
       );
     }

@@ -128,7 +128,7 @@ const cadastrarPerfil = async (req, res) => {
       id_empresa,
       id_usuario,
       id_filial,
-      "CADASTRO_PERFIL",
+      "Cadastrou perfil",
       descricaoAuditoria
     );
 
@@ -295,7 +295,7 @@ const editarPerfil = async (req, res) => {
         id_empresa,
         id_usuario,
         id_filial || perfilAtual.id_filial,
-        "EDICAO_PERFIL",
+        "Editou perfil",
         descricaoAuditoria
       );
     }
@@ -457,7 +457,7 @@ const alterarStatusPerfil = async (req, res) => {
     }
 
     // Registrar auditoria da alteração de status
-    const acao = status_perfil ? "ATIVACAO_PERFIL" : "INATIVACAO_PERFIL";
+    const acao = status_perfil ? "Ativou perfil" : "Inativou perfil";
     const statusTexto = status_perfil ? "Ativou" : "Inativou";
     let descricaoAuditoria = `${statusTexto} o perfil: ${perfilAtual.nome_perfil} (ID: ${id_perfil})`;
 
