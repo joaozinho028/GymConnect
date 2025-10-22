@@ -569,7 +569,7 @@
 //                   <td colSpan={7} className="text-center py-6 text-gray-400">
 //                     {busca
 //                       ? "Nenhum dado bancário encontrado com o filtro aplicado."
-//                       : "Nenhum dado bancário cadastrado."}
+///                       : "Nenhum dado bancário cadastrado."}
 //                   </td>
 //                 </tr>
 //               ) : (
@@ -700,7 +700,6 @@ import {
   Save,
   Search,
   Settings,
-  Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
@@ -862,6 +861,11 @@ const DadosBancarios = ({ ...rest }: any) => {
       .matches(/^\d{14}$/, "Informe um CNPJ válido (14 dígitos)")
       .required("Informe o CNPJ"),
     titular: yup.string().required("Informe o nome do titular"),
+    chavePix: yup.string().required("Chave PIX obrigatória"),
+    tipoChavePix: yup
+      .string()
+      .oneOf(["CNPJ", "EVP"], "Tipo de chave PIX inválido")
+      .required("Tipo da chave PIX é obrigatório"),
   });
 
   const { handleSubmit, ...form } = GetForm(schema);
@@ -1018,9 +1022,6 @@ const DadosBancarios = ({ ...rest }: any) => {
 
   const opcoesChavePix = [
     { value: "CNPJ", label: "CNPJ" },
-    { value: "CPF", label: "CPF" },
-    { value: "EMAIL", label: "E-mail" },
-    { value: "PHONE", label: "Telefone" },
     { value: "EVP", label: "Chave Aleatória" },
   ];
 
@@ -1168,13 +1169,13 @@ const DadosBancarios = ({ ...rest }: any) => {
           </div>
 
           {/* Navegação por Abas */}
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
+          <div className="border-b border-gray-200 cursor-pointer">
+            <nav className="-mb-px flex space-x-8 cursor-pointer">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`group inline-flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={` cursosr-pointer group inline-flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === tab.id
                       ? "border-blue-500 text-blue-600"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -1189,7 +1190,7 @@ const DadosBancarios = ({ ...rest }: any) => {
                   >
                     {tab.icon}
                   </span>
-                  <span>{tab.label}</span>
+                  <span className="cursor-pointer">{tab.label}</span>
                 </button>
               ))}
             </nav>
@@ -1290,11 +1291,11 @@ const DadosBancarios = ({ ...rest }: any) => {
                 <div className="border-t pt-6">
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
                     <h3 className="font-semibold text-green-900 mb-2 flex items-center gap-2">
-                      💳 Chave PIX (Opcional)
+                      💳 Chave PIX (obrigatório)
                     </h3>
                     <p className="text-green-700 text-sm">
-                      Cadastre uma chave PIX para receber transferências mais
-                      rápidas (instantâneas) com taxa menor (R$ 0,90).
+                      Cadastre uma chave PIX para receber transferências para
+                      sua conta, taxa de R$ 0,90 por transação.
                     </p>
                   </div>
 
@@ -1356,17 +1357,17 @@ const DadosBancarios = ({ ...rest }: any) => {
               <div className="flex items-center justify-between p-6 bg-blue-50 rounded-lg">
                 <div>
                   <h3 className="font-medium text-blue-900 text-lg">
-                    Ativar Transferências Automáticas
+                    Transferências Automáticas via PIX
                   </h3>
                   <p className="text-sm text-blue-700 mt-1">
                     Receba automaticamente os valores dos pagamentos na sua
-                    conta bancária
+                    conta bancária via PIX.
                   </p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={configTransferencia.ativo}
+                    checked={true && configTransferencia.ativo}
                     onChange={(e) =>
                       setConfigTransferencia((prev) => ({
                         ...prev,
@@ -1378,192 +1379,69 @@ const DadosBancarios = ({ ...rest }: any) => {
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
               </div>
-
               {configTransferencia.ativo && (
-                <>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Frequência */}
-                    <div className="space-y-4">
-                      <h4 className="font-medium text-gray-900">
-                        Frequência das Transferências
-                      </h4>
-                      <div className="space-y-3">
-                        <label className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                          <input
-                            type="radio"
-                            name="intervalo"
-                            value="DAILY"
-                            checked={configTransferencia.intervalo === "DAILY"}
-                            onChange={(e) =>
-                              setConfigTransferencia((prev) => ({
-                                ...prev,
-                                intervalo: e.target.value as any,
-                              }))
-                            }
-                            className="text-blue-600 mr-3"
-                          />
-                          <div>
-                            <div className="font-medium">
-                              Diária (Recomendado)
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              Transfira todos os dias no horário configurado
-                            </div>
-                          </div>
-                        </label>
-
-                        <label className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                          <input
-                            type="radio"
-                            name="intervalo"
-                            value="WEEKLY"
-                            checked={configTransferencia.intervalo === "WEEKLY"}
-                            onChange={(e) =>
-                              setConfigTransferencia((prev) => ({
-                                ...prev,
-                                intervalo: e.target.value as any,
-                              }))
-                            }
-                            className="text-blue-600 mr-3"
-                          />
-                          <div>
-                            <div className="font-medium">Semanal</div>
-                            <div className="text-sm text-gray-500">
-                              Transfira uma vez por semana
-                            </div>
-                          </div>
-                        </label>
-
-                        <label className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                          <input
-                            type="radio"
-                            name="intervalo"
-                            value="MONTHLY"
-                            checked={
-                              configTransferencia.intervalo === "MONTHLY"
-                            }
-                            onChange={(e) =>
-                              setConfigTransferencia((prev) => ({
-                                ...prev,
-                                intervalo: e.target.value as any,
-                              }))
-                            }
-                            className="text-blue-600 mr-3"
-                          />
-                          <div>
-                            <div className="font-medium">Mensal</div>
-                            <div className="text-sm text-gray-500">
-                              Transfira uma vez por mês
-                            </div>
-                          </div>
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Configurações */}
-                    <div className="space-y-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Horário da Transferência
-                        </label>
-                        <input
-                          type="time"
-                          value={configTransferencia.horario}
-                          onChange={(e) =>
-                            setConfigTransferencia((prev) => ({
-                              ...prev,
-                              horario: e.target.value,
-                            }))
-                          }
-                          className="w-full border rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Transferências são processadas no próximo dia útil se
-                          feitas após 17h
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Valor Mínimo para Transferir (R$)
-                        </label>
-                        <input
-                          type="number"
-                          value={configTransferencia.valor_minimo}
-                          onChange={(e) =>
-                            setConfigTransferencia((prev) => ({
-                              ...prev,
-                              valor_minimo: parseFloat(e.target.value) || 0,
-                            }))
-                          }
-                          className="w-full border rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          min="10"
-                          step="0.01"
-                          placeholder="10.00"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Valor mínimo permitido: R$ 10,00
-                        </p>
-                      </div>
-                    </div>
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Frequência das Transferências
+                    </label>
+                    <input
+                      type="text"
+                      value="Diária"
+                      disabled
+                      className="w-full border rounded-lg px-4 py-3 bg-gray-100 text-gray-500"
+                    />
                   </div>
-
-                  {/* Resumo das Taxas */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Horário da Transferência
+                    </label>
+                    <input
+                      type="time"
+                      value="23:59"
+                      disabled
+                      className="w-full border rounded-lg px-4 py-3 bg-gray-100 text-gray-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Valor Mínimo para Transferir (R$)
+                    </label>
+                    <input
+                      type="number"
+                      value={configTransferencia.valor_minimo}
+                      onChange={(e) =>
+                        setConfigTransferencia((prev) => ({
+                          ...prev,
+                          valor_minimo: parseFloat(e.target.value) || 0,
+                        }))
+                      }
+                      className="w-full border rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      min="10"
+                      step="0.01"
+                      placeholder="10.00"
+                    />
+                  </div>
+                  {/* Resumo das Taxas - apenas PIX */}
                   <div className="bg-gray-50 rounded-lg p-6">
                     <h4 className="font-medium text-gray-900 mb-4">
                       Resumo de Taxas e Prazos
                     </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div
-                        className={`border-2 rounded-lg p-4 ${
-                          chavePix
-                            ? "border-green-300 bg-green-50"
-                            : "border-gray-300 bg-white"
-                        }`}
-                      >
-                        <h5
-                          className={`font-medium flex items-center gap-2 ${
-                            chavePix ? "text-green-800" : "text-gray-500"
-                          }`}
-                        >
-                          <CreditCard size={18} />
-                          PIX {chavePix ? "(Configurado)" : "(Não configurado)"}
-                        </h5>
-                        <div className="mt-2 space-y-1">
-                          <p
-                            className={`text-sm ${
-                              chavePix ? "text-green-700" : "text-gray-500"
-                            }`}
-                          >
-                            <strong>Taxa:</strong> R$ 0,90 por transferência
-                          </p>
-                          <p
-                            className={`text-sm ${
-                              chavePix ? "text-green-700" : "text-gray-500"
-                            }`}
-                          >
-                            <strong>Prazo:</strong> Instantâneo (24h por dia)
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="border-2 border-blue-300 rounded-lg p-4 bg-blue-50">
-                        <h5 className="font-medium text-blue-800 flex items-center gap-2">
-                          <Settings size={18} />
-                          TED (Fallback)
-                        </h5>
-                        <div className="mt-2 space-y-1">
-                          <p className="text-sm text-blue-700">
-                            <strong>Taxa:</strong> R$ 3,90 por transferência
-                          </p>
-                          <p className="text-sm text-blue-700">
-                            <strong>Prazo:</strong> 1 dia útil
-                          </p>
-                        </div>
+                    <div className="border-2 border-green-300 rounded-lg p-4 bg-green-50">
+                      <h5 className="font-medium flex items-center gap-2 text-green-800">
+                        <CreditCard size={18} />
+                        PIX
+                      </h5>
+                      <div className="mt-2 space-y-1">
+                        <p className="text-sm text-green-700">
+                          <strong>Taxa:</strong> R$ 0,90 por transferência
+                        </p>
+                        <p className="text-sm text-green-700">
+                          <strong>Prazo:</strong> Instantâneo (24h por dia)
+                        </p>
                       </div>
                     </div>
                   </div>
-
                   <div className="flex justify-end pt-4">
                     <Button
                       onClick={salvarConfiguracoes}
@@ -1584,7 +1462,7 @@ const DadosBancarios = ({ ...rest }: any) => {
                       )}
                     </Button>
                   </div>
-                </>
+                </div>
               )}
             </div>
           )}
@@ -1795,12 +1673,9 @@ const DadosBancarios = ({ ...rest }: any) => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               {dado.chave_pix ? (
-                                <div className="flex items-center gap-2">
-                                  <Zap size={16} className="text-green-500" />
-                                  <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">
-                                    {dado.tipo_chave_pix}
-                                  </span>
-                                </div>
+                                <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full font-mono">
+                                  {dado.chave_pix}
+                                </span>
                               ) : (
                                 <span className="text-xs px-2 py-1 bg-gray-100 text-gray-500 rounded-full">
                                   Não configurado

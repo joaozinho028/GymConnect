@@ -29,8 +29,8 @@ Thumbs.db
 front-end/.next/
 front-end/node_modules/
 front-end/out/
-
-# front-end/.env*
+front-end/.env.local
+front-end/.env*
 
 # Back-end specific
 back-end/node_modules/

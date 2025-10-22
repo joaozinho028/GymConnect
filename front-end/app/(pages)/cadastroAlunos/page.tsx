@@ -87,77 +87,50 @@ const CadastrarAluno = ({ ...rest }: any) => {
         setPaymentLinkId(data.paymentLinkId);
         setDadosAluno(aluno);
 
-        let cancelado = false;
+        // Monta mensagem personalizada
+        const mensagem = `Olá ${nome}, seu link de pagamento do plano ${plano} está pronto! Clique para pagar: ${data.paymentLinkUrl}`;
+        // Limpa telefone para formato internacional (ex: 5511999999999)
+        const telefoneWhatsApp = telefone.replace(/\D/g, "");
+        const urlWhatsApp = `https://wa.me/55${telefoneWhatsApp}?text=${encodeURIComponent(
+          mensagem
+        )}`;
 
+        // Exibe modal com botão de WhatsApp
         await Swal.fire({
-          icon: "info",
-          title: "Aguardando pagamento...",
+          icon: "success",
+          title: "Link gerado!",
           html: `
-            <p>Para concluir o cadastro, clique no botão abaixo e realize o pagamento:</p>
-            <a href="${data.paymentLinkUrl}" target="_blank" class="swal2-confirm swal2-styled" style="margin-top:16px;">Pagar Agora</a>
-            <br/><br/>
-            <button id="cancelar-requisicao-btn" class="swal2-cancel swal2-styled" style="background:#ef4444;">Cancelar requisição</button>
-            <br/><br/>
-            <div id="swal-loader" style="margin-top:16px;">
-              <span class="swal2-loader"></span>
-              <span>Aguardando confirmação do pagamento...</span>
+            <div style="text-align:left;">
+              <p><strong>Link de pagamento:</strong></p>
+              <a href="${data.paymentLinkUrl}" target="_blank" style="word-break:break-all; color:#2563eb; text-decoration:underline;">
+                ${data.paymentLinkUrl}
+              </a>
+              <br/><br/>
+              <a href="${urlWhatsApp}" target="_blank"
+                style="
+                  display:inline-flex;
+                  align-items:center;
+                  gap:8px;
+                  background:#25D366;
+                  color:#fff;
+                  font-weight:600;
+                  border-radius:6px;
+                  padding:10px 18px;
+                  font-size:16px;
+                  text-decoration:none;
+                  box-shadow:0 2px 8px rgba(37,211,102,0.15);
+                  transition:background 0.2s;
+                "
+                onmouseover="this.style.background='#1DA851'"
+                onmouseout="this.style.background='#25D366'"
+              >
+                
+                Enviar pelo WhatsApp
+              </a>
             </div>
           `,
           showConfirmButton: false,
-          showCloseButton: false,
-          allowOutsideClick: false,
-          didRender: () => {
-            const btn = document.getElementById("cancelar-requisicao-btn");
-            if (btn) {
-              btn.onclick = () => {
-                cancelado = true;
-                Swal.close();
-              };
-            }
-          },
-          willOpen: async () => {
-            // Polling: verifica pagamento a cada 10 segundos, até 1 hora ou cancelado
-            const maxTentativas = 360; // 1 hora (3600s / 10s)
-            let tentativas = 0;
-            while (!cancelado && tentativas < maxTentativas) {
-              await new Promise((resolve) => setTimeout(resolve, 10000)); // 10s
-              if (cancelado) break;
-              const resp = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/alunos/confirmar-pagamento-link`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                  },
-                  body: JSON.stringify({
-                    paymentLinkId: data.paymentLinkId,
-                    dadosAluno: aluno,
-                  }),
-                }
-              );
-              const result = await resp.json();
-              if (result.success) {
-                Swal.close();
-                Swal.fire({
-                  icon: "success",
-                  title: "Cadastro realizado!",
-                  text: "Pagamento confirmado e aluno cadastrado.",
-                });
-                limparFormulario();
-                return;
-              }
-              tentativas++;
-            }
-            if (!cancelado) {
-              Swal.close();
-              Swal.fire({
-                icon: "warning",
-                title: "Pagamento não realizado",
-                text: "Tempo limite de 1 hora atingido. Tente novamente.",
-              });
-            }
-          },
+          showCloseButton: true,
         });
       } else {
         Swal.fire({

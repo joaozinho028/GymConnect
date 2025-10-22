@@ -4,9 +4,6 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import {
   Activity,
   AlertTriangle,
-  Bell,
-  Calendar,
-  Clock,
   DollarSign,
   FileText,
   Plus,
@@ -402,7 +399,7 @@ export default function DashboardPage() {
       {/* Seção inferior com atividades recentes e lembretes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Atividades recentes */}
-        <div className="bg-white rounded-lg shadow p-6">
+        {/* <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Activity size={20} className="text-blue-500" />
@@ -433,10 +430,10 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
 
         {/* Lembretes e notificações */}
-        <div className="bg-white rounded-lg shadow p-6">
+        {/* <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Bell size={20} className="text-orange-500" />
@@ -480,7 +477,7 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );
