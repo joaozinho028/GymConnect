@@ -11,10 +11,8 @@ const {
 } = require("../controllers/alunoController");
 const authMiddleware = require("../middleware/authMiddleware");
 
-// Nova rota para gerar link
 router.post("/iniciar-cadastro-aluno", authMiddleware, iniciarCadastroAluno);
 
-// Nova rota para confirmar pagamento e cadastrar aluno
 router.post(
   "/confirmar-pagamento-link",
   authMiddleware,

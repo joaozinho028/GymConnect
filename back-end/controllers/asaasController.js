@@ -39,28 +39,15 @@ const asaasRequest = async (endpoint, method = "GET", data = null) => {
   }
 };
 
-// Função para calcular valor do plano
-const calcularValorPlano = (plano_aluno) => {
-  const valores = {
-    mensal: 89.9,
-    trimestral: 249.9,
-    semestral: 449.9,
-    anual: 899.9,
-  };
-  return valores[plano_aluno] || 89.9;
-};
-
-// Função para criar link de pagamento
-const criarLinkPagamento = async (dadosAluno) => {
-  const valor = calcularValorPlano(dadosAluno.plano_aluno);
+const criarLinkPagamento = async (dadosAluno, id_empresa, valor) => {
   const payload = {
     name: `${dadosAluno.nome_aluno}`,
     description: `Pagamento do plano ${dadosAluno.plano_aluno}`,
     endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
       .toISOString()
       .split("T")[0],
-    value: valor,
-    chargeType: "INSTALLMENT", // Use INSTALLMENT para a sandbox
+    value: valor, // <-- aqui usa o valor buscado do banco
+    chargeType: "INSTALLMENT",
     billingType: "UNDEFINED",
     notifyCustomer: false,
     email: dadosAluno.email_aluno,
@@ -71,20 +58,18 @@ const criarLinkPagamento = async (dadosAluno) => {
     maxInstallmentCount: 1,
   };
   const link = await asaasRequest("/paymentLinks", "POST", payload);
-  console.log("🔗 Retorno do Asaas:", link); // Veja todos os campos retornados
   return {
     id: link.id,
     nome: link.name,
     descricao: link.description,
     valor: link.value,
-    url: link.url || link.paymentLinkUrl || link.data?.url || null, // Tente todos os possíveis
+    url: link.url || link.paymentLinkUrl || link.data?.url || null,
     expiracao: link.endDate,
     status: link.status,
   };
 };
 
 module.exports = {
-  calcularValorPlano,
   criarLinkPagamento,
   asaasRequest,
 };

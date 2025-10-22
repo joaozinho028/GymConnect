@@ -7,11 +7,9 @@ const {
   processarCartaoCredito,
   calcularValorPlano,
   criarLinkPagamento,
-  consultarStatusPagamento,
-  asaasRequest, // Adicione esta linha
+  asaasRequest,
 } = require("./asaasController");
 
-// Função para registrar auditoria de alunos
 const registrarAuditoria = async (
   id_empresa,
   id_usuario,
@@ -43,14 +41,12 @@ const registrarAuditoria = async (
   }
 };
 
-// Função auxiliar para formatar CPF para auditoria
 const formatarCPFParaAuditoria = (cpf) => {
   if (!cpf) return "";
   const cpfLimpo = cpf.replace(/[^\d]/g, "");
   return cpfLimpo.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 };
 
-// Função para gerar matrícula única de 5 dígitos
 const gerarMatriculaUnica = async (id_empresa, id_filial) => {
   let tentativas = 0;
   const maxTentativas = 100; // Evitar loop infinito
@@ -79,6 +75,27 @@ const gerarMatriculaUnica = async (id_empresa, id_filial) => {
   // Se não conseguir gerar após 100 tentativas, usar timestamp como fallback
   const timestamp = Date.now().toString().slice(-5);
   return timestamp;
+};
+
+const buscarValorPlano = async (id_empresa, ciclo_pagamento_plano) => {
+  console.log("🔎 Buscando valor do plano:", {
+    id_empresa,
+    ciclo_pagamento_plano,
+  });
+
+  const { data, error } = await supabase
+    .from("planos")
+    .select("valor_plano")
+    .eq("id_empresa", id_empresa)
+    .eq("ciclo_pagamento_plano", ciclo_pagamento_plano)
+    .single();
+
+  console.log("📦 Resultado da busca no banco:", { data, error });
+
+  if (error || !data) {
+    throw new Error("Plano não encontrado para esta empresa.");
+  }
+  return Number(data.valor_plano);
 };
 
 const cadastrarAluno = async (req, res) => {
@@ -436,94 +453,6 @@ const cadastrarAluno = async (req, res) => {
     res.status(500).json({
       error: "Erro interno do servidor",
       tipo: "server_erro",
-    });
-  }
-};
-
-// Nova função para confirmar pagamento PIX (será chamada via webhook ou polling)
-const confirmarPagamentoPIX = async (req, res) => {
-  try {
-    const { asaas_payment_id, dadosAluno } = req.body;
-
-    console.log("🔄 Confirmando pagamento PIX:", asaas_payment_id);
-
-    // Consultar status no Asaas
-    const { consultarStatusPagamento } = require("./asaasController");
-    const statusPagamento = await consultarStatusPagamento(asaas_payment_id);
-
-    if (statusPagamento.aprovado) {
-      // Pagamento confirmado: Cadastrar aluno
-      const matricula_aluno = await gerarMatriculaUnica(
-        dadosAluno.id_empresa,
-        dadosAluno.id_filial
-      );
-
-      const { data: novoAluno, error: erroAluno } = await supabase
-        .from("alunos")
-        .insert({
-          ...dadosAluno,
-          matricula_aluno,
-          forma_pagamento: "pix",
-          situacao: "regular",
-          status_aluno: true,
-          data_cadastro: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (erroAluno) {
-        throw erroAluno;
-      }
-
-      // Registrar transação
-      const valorPlano = calcularValorPlano(dadosAluno.plano_aluno);
-      await supabase.from("transacoes").insert({
-        id_empresa: dadosAluno.id_empresa,
-        id_filial: dadosAluno.id_filial,
-        id_aluno: novoAluno.id_aluno,
-        id_usuario: dadosAluno.id_usuario,
-        valor: valorPlano,
-        metodo_pagamento: "pix",
-        status: true,
-        asaas_payment_id,
-      });
-
-      // Registrar auditoria
-      const cpfFormatado = formatarCPFParaAuditoria(dadosAluno.cpf_aluno);
-      const descricaoAuditoria = `Cadastrou o aluno: ${dadosAluno.nome_aluno} (CPF: ${cpfFormatado}, Matrícula: ${matricula_aluno}). Plano: ${dadosAluno.plano_aluno}, Pagamento: PIX confirmado, Situação: regular`;
-
-      await registrarAuditoria(
-        dadosAluno.id_empresa,
-        dadosAluno.id_usuario,
-        dadosAluno.id_filial,
-        "CADASTRO_ALUNO",
-        descricaoAuditoria
-      );
-
-      res.json({
-        success: true,
-        message: "Pagamento PIX confirmado! Aluno cadastrado com sucesso.",
-        aluno: novoAluno,
-      });
-    } else if (statusPagamento.vencido || statusPagamento.cancelado) {
-      res.status(400).json({
-        success: false,
-        message: "Pagamento PIX expirou ou foi cancelado.",
-        status: statusPagamento.status,
-      });
-    } else {
-      res.json({
-        success: false,
-        message: "Pagamento PIX ainda pendente.",
-        status: statusPagamento.status,
-        aguardando: true,
-      });
-    }
-  } catch (error) {
-    console.error("❌ Erro ao confirmar pagamento PIX:", error);
-    res.status(500).json({
-      success: false,
-      error: "Erro ao confirmar pagamento PIX",
     });
   }
 };
@@ -902,7 +831,7 @@ const importarAlunos = async (req, res) => {
           `Linha ${linha}: "${forma_pagamento}" → "${formaPagamentoLimpa}"`
         );
 
-        const planosValidos = ["mensal", "trimestral", "semestral", "anual"];
+        const planosValidos = ["Mensal", "Trimestral", "Semestral", "Anual"];
         const planoLimpo = plano_aluno.toLowerCase().trim();
 
         if (!planosValidos.includes(planoLimpo)) {
@@ -1119,7 +1048,6 @@ const importarAlunos = async (req, res) => {
   }
 };
 
-// Função para alternar status do aluno (ativar/inativar)
 const alterarStatusAluno = async (req, res) => {
   try {
     const { id_aluno, status_aluno } = req.body;
@@ -1206,7 +1134,6 @@ const alterarStatusAluno = async (req, res) => {
   }
 };
 
-// Nova rota: inicia o processo e retorna o link
 const iniciarCadastroAluno = async (req, res) => {
   try {
     const { nome_aluno, email_aluno, telefone_aluno, cpf_aluno, plano_aluno } =
@@ -1223,8 +1150,17 @@ const iniciarCadastroAluno = async (req, res) => {
       plano_aluno: plano_aluno.toLowerCase(),
     };
 
-    // Gera o link de pagamento
-    const link = await criarLinkPagamento(dadosAluno);
+    // Busca o valor do plano no banco
+    const { id_empresa } = req.user;
+    let valorPlano;
+    try {
+      valorPlano = await buscarValorPlano(id_empresa, dadosAluno.plano_aluno);
+    } catch (e) {
+      return res.status(400).json({ error: e.message });
+    }
+
+    // Gera o link de pagamento passando o valor
+    const link = await criarLinkPagamento(dadosAluno, id_empresa, valorPlano);
 
     if (!link || !link.url) {
       return res
@@ -1247,8 +1183,6 @@ const iniciarCadastroAluno = async (req, res) => {
       .json({ error: "Erro interno ao gerar link de pagamento." });
   }
 };
-
-// Nova rota: confirma o pagamento e cadastra o aluno
 const confirmarPagamentoLink = async (req, res) => {
   try {
     const { paymentLinkId, dadosAluno } = req.body;
@@ -1313,9 +1247,7 @@ const confirmarPagamentoLink = async (req, res) => {
 
 module.exports = {
   cadastrarAluno,
-  confirmarPagamentoPIX, // Nova função
   consultarAlunos,
-  // confirmarPagamentoBoleto,
   calcularValorPlano,
   gerarMatriculaUnica,
   obterEstatisticasAlunos,
@@ -1324,4 +1256,5 @@ module.exports = {
   alterarStatusAluno,
   iniciarCadastroAluno,
   confirmarPagamentoLink,
+  buscarValorPlano,
 };
