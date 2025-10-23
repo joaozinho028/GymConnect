@@ -5,7 +5,7 @@ import InputSelectComponent from "@/components/Forms/InputSelect";
 import { useAuth } from "@/contexts/AuthContext";
 import { GetForm } from "@/utils";
 import { ChevronRight, Save } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import * as yup from "yup";
 
@@ -15,14 +15,15 @@ const CadastrarAluno = ({ ...rest }: any) => {
   const [telefone, setTelefone] = useState("");
   const [cpf, setCpf] = useState("");
   const [plano, setPlano] = useState("");
-  const { token } = useAuth();
-  const [formaPagamento, setFormaPagamento] = useState("");
+  const [opcoesPlano, setOpcoesPlano] = useState<any[]>([]);
+  const { token, user } = useAuth();
+  const [paymentLinkId, setPaymentLinkId] = useState<string | null>(null);
+  const [dadosAluno, setDadosAluno] = useState<any>(null);
   const [yupSchema, setYupSchema] = useState<
     yup.ObjectSchema<{}, yup.AnyObject, {}, "">
   >(yup.object().shape({}));
   const { handleSubmit, setValue, ...form } = GetForm(yupSchema, setYupSchema);
 
-  // Criar objeto que inclui setValue para os componentes
   const formWithSetValue = { ...form, setValue };
 
   // Função para limpar formulário
@@ -32,29 +33,36 @@ const CadastrarAluno = ({ ...rest }: any) => {
     setTelefone("");
     setCpf("");
     setPlano("");
-    setFormaPagamento("");
+    setPaymentLinkId(null);
+    setDadosAluno(null);
     setValue("plano", null);
-    setValue("formaPagamento", null);
   };
 
+  useEffect(() => {
+    async function fetchPlanos() {
+      try {
+        const resPlanos = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/empresas/listar-planos`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (resPlanos.ok) {
+          const dataPlanos = await resPlanos.json();
+          setOpcoesPlano(
+            (dataPlanos || []).map((f: any) => ({
+              value: f.ciclo_pagamento_plano, // <-- ciclo, não id!
+              label: f.ciclo_pagamento_plano,
+            }))
+          );
+        }
+      } catch {}
+    }
+    fetchPlanos();
+  }, [token]);
+
+  // 1. Envia dados, recebe link de pagamento
   const onSubmitFunction = async () => {
-    // Obter valores do React Hook Form
     const formValues = form.getValues();
-
-    // Log dos estados atuais antes de criar o objeto
-    console.log("Estados atuais:");
-    console.log("- nome:", nome);
-    console.log("- email:", email);
-    console.log("- telefone:", telefone);
-    console.log("- cpf:", cpf);
-    console.log("- plano:", plano);
-    console.log("- formaPagamento:", formaPagamento);
-    console.log("- formValues:", formValues);
-
-    // Extrair valores dos objetos do React Hook Form se necessário
     const planoValue = (formValues as any).plano?.value || plano;
-    const formaPagamentoValue =
-      (formValues as any).formaPagamento?.value || formaPagamento;
 
     const aluno = {
       nome_aluno: nome,
@@ -62,27 +70,14 @@ const CadastrarAluno = ({ ...rest }: any) => {
       telefone_aluno: telefone,
       cpf_aluno: cpf,
       plano_aluno: planoValue,
-      forma_pagamento: formaPagamentoValue,
+      id_empresa: user?.id_empresa,
+      id_filial: user?.id_filial,
     };
 
-    console.log("Processando cadastro de aluno:", aluno);
-    console.log("Token de autenticação:", token);
-    console.log(
-      "URL da API:",
-      `${process.env.NEXT_PUBLIC_API_URL}/alunos/cadastrar-alunos`
-    );
-
-    // Mostrar loading diferente baseado na forma de pagamento
-    const loadingMessage =
-      formaPagamentoValue === "boleto"
-        ? "Gerando boleto..."
-        : "Processando pagamento...";
-
-    // SweetAlert de loading
     Swal.fire({
       icon: "info",
       title: "Aguarde",
-      text: loadingMessage,
+      text: "Gerando link de pagamento...",
       allowOutsideClick: false,
       didOpen: () => {
         Swal.showLoading();
@@ -91,7 +86,7 @@ const CadastrarAluno = ({ ...rest }: any) => {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/alunos/cadastrar-alunos`,
+        `${process.env.NEXT_PUBLIC_API_URL}/alunos/iniciar-cadastro-aluno`,
         {
           method: "POST",
           headers: {
@@ -101,71 +96,129 @@ const CadastrarAluno = ({ ...rest }: any) => {
           body: JSON.stringify(aluno),
         }
       );
-
-      console.log("Status da resposta:", response.status);
-      console.log(
-        "Headers da resposta:",
-        Object.fromEntries(response.headers.entries())
-      );
-
       const data = await response.json();
-      console.log("Dados retornados do backend:", data);
-
-      // Fechar loading
       Swal.close();
 
-      if (response.ok) {
-        // Lógica baseada no tipo de resposta do backend
-        if (data.tipo === "boleto") {
-          // BOLETO: Aluno cadastrado, aguardando pagamento
-          await Swal.fire({
-            icon: "success",
-            title: "Cadastro Realizado!",
-            text: 'Aluno cadastrado com status "Aguardando Pagamento". Boleto gerado com sucesso!',
-            confirmButtonText: "Ok",
-          });
+      if (data.success && data.paymentLinkUrl) {
+        setPaymentLinkId(data.paymentLinkId);
+        setDadosAluno(aluno);
 
-          // Abrir boleto em nova aba
-          // if (data.linkBoleto) {
-          //   window.open(data.linkBoleto, "_blank");
-          // }
+        const mensagem = `Olá ${nome}, seu link de pagamento do plano ${plano} está pronto! Clique para pagar: ${data.paymentLinkUrl}`;
+        const telefoneWhatsApp = telefone.replace(/\D/g, "");
+        const urlWhatsApp = `https://wa.me/55${telefoneWhatsApp}?text=${encodeURIComponent(
+          mensagem
+        )}`;
 
-          // Limpar formulário
-          limparFormulario();
-        } else if (data.tipo === "pagamento_aprovado") {
-          // PIX/CARTÃO: Pagamento aprovado, aluno cadastrado
-          await Swal.fire({
-            icon: "success",
-            title: "Pagamento Aprovado!",
-            text: "Pagamento processado com sucesso! Aluno cadastrado e ativo.",
-            timer: 3000,
-          });
+        // Exibe modal com preloader e bloqueio de fechamento
+        let swalClosed = false;
+        const swalInstance = await Swal.fire({
+          icon: "info",
+          title: "Aguardando pagamento...",
+          html: `
+            <div style="text-align:left;">
+              <p><strong>Link de pagamento:</strong></p>
+              <a href="${data.paymentLinkUrl}" target="_blank" style="word-break:break-all; color:#2563eb; text-decoration:underline;">
+                ${data.paymentLinkUrl}
+              </a>
+              <br/><br/>
+                <div id="swal-preloader" style="display:flex;align-items:center;gap:10px;">
+                <span class="swal2-loader" style="display:inline-block;width:24px;height:24px;border:3px solid #2563eb;border-radius:50%;border-top-color:transparent;animation:swal-spin 1s linear infinite;"></span>
+                <span>Aguardando confirmação do pagamento...</span>
+              </div>
+              <style>
+                @keyframes swal-spin { 100% { transform: rotate(360deg); } }
+              </style>
+              <br/><br/>
+              <a href="${urlWhatsApp}" target="_blank"
+                style="
+                  display:inline-flex;
+                  align-items:center;
+                  gap:8px;
+                  background:#25D366;
+                  color:#fff;
+                  font-weight:600;
+                  border-radius:6px;
+                  padding:10px 18px;
+                  font-size:16px;
+                  text-decoration:none;
+                  box-shadow:0 2px 8px rgba(37,211,102,0.15);
+                  transition:background 0.2s;
+                "
+                onmouseover="this.style.background='#1DA851'"
+                onmouseout="this.style.background='#25D366'"
+              >
+                Enviar pelo WhatsApp
+              </a>
+            </div>
+          `,
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          showConfirmButton: false,
+          didOpen: () => {
+            Swal.showLoading();
+            // Inicia polling para verificar pagamento
+            const interval = setInterval(async () => {
+              if (swalClosed) {
+                clearInterval(interval);
+                return;
+              }
+              try {
+                const response = await fetch(
+                  `${process.env.NEXT_PUBLIC_API_URL}/alunos/confirmar-pagamento-link`,
+                  {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                      paymentLinkId: data.paymentLinkId,
+                      dadosAluno: aluno,
+                    }),
+                  }
+                );
+                const result = await response.json();
+                console.log(
+                  "Resposta da API confirmar-pagamento-link:",
+                  result
+                ); // <-- ADICIONE AQUI
 
-          // Limpar formulário
-          limparFormulario();
-        } else if (data.tipo === "pagamento_rejeitado") {
-          // PIX/CARTÃO: Pagamento rejeitado
-          await Swal.fire({
-            icon: "error",
-            title: "Pagamento Rejeitado",
-            text:
-              data.message ||
-              "Não foi possível processar o pagamento. Tente novamente, ou contate a central de atendimento.",
-          });
-          // Não limpar formulário para permitir nova tentativa
-        }
+                if (result.success) {
+                  swalClosed = true;
+                  Swal.close();
+                  Swal.fire({
+                    icon: "success",
+                    title: "Cadastro realizado!",
+                    text: "Pagamento confirmado e aluno cadastrado.",
+                  });
+                  limparFormulario();
+                  clearInterval(interval);
+                }
+              } catch {}
+            }, 5000); // verifica a cada 5 segundos
+
+            // Fecha o swal automaticamente após 5 minutos (300000 ms)
+            setTimeout(() => {
+              if (!swalClosed) {
+                swalClosed = true;
+                Swal.close();
+                Swal.fire({
+                  icon: "warning",
+                  title: "Tempo esgotado",
+                  text: "O pagamento não foi identificado em até 5 minutos. Tente novamente.",
+                });
+              }
+            }, 300000);
+          },
+        });
       } else {
-        // Erro na requisição
         Swal.fire({
           icon: "error",
           title: "Erro",
-          text: data.error || "Erro ao processar cadastro do aluno.",
+          text: data.error || "Erro ao gerar link de pagamento.",
         });
       }
     } catch (error) {
-      console.error("Erro ao conectar com o servidor:", error);
-
-      // Fechar loading e mostrar erro
       Swal.fire({
         icon: "error",
         title: "Erro de Conexão",
@@ -174,18 +227,59 @@ const CadastrarAluno = ({ ...rest }: any) => {
     }
   };
 
-  const opcoesPlano = [
-    { label: "Mensal", value: "mensal" },
-    { label: "Trimestral", value: "trimestral" },
-    { label: "Anual", value: "anual" },
-  ];
+  // 2. Confirma pagamento e cadastra aluno
+  const confirmarPagamento = async () => {
+    if (!paymentLinkId || !dadosAluno) return;
 
-  const opcoesPagamento = [
-    { label: "PIX", value: "pix" },
-    { label: "Débito", value: "debito" },
-    { label: "Crédito", value: "credito" },
-    { label: "Boleto", value: "boleto" },
-  ];
+    Swal.fire({
+      icon: "info",
+      title: "Verificando pagamento...",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/alunos/confirmar-pagamento-link`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            paymentLinkId,
+            dadosAluno,
+          }),
+        }
+      );
+      const result = await response.json();
+      Swal.close();
+
+      if (result.success) {
+        Swal.fire({
+          icon: "success",
+          title: "Cadastro realizado!",
+          text: "Pagamento confirmado e aluno cadastrado.",
+        });
+        limparFormulario();
+      } else {
+        Swal.fire({
+          icon: "warning",
+          title: "Aguardando pagamento",
+          text: "O pagamento ainda não foi identificado. Tente novamente em alguns minutos.",
+        });
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Erro",
+        text: "Erro ao confirmar pagamento. Tente novamente.",
+      });
+    }
+  };
 
   return (
     <div className="p-4 max-w-7xl mx-auto space-y-8">
@@ -252,7 +346,7 @@ const CadastrarAluno = ({ ...rest }: any) => {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
             <InputSelectComponent
               label="Plano"
               name="plano"
@@ -260,36 +354,11 @@ const CadastrarAluno = ({ ...rest }: any) => {
               error="Preencha esse campo!"
               formulario={formWithSetValue}
               onChange={(selectedOption: any) => {
-                console.log(
-                  "Plano selecionado (objeto completo):",
-                  selectedOption
-                );
                 const value = selectedOption ? selectedOption.value : "";
-                console.log("Valor extraído do plano:", value);
                 setPlano(value);
-                setValue("plano", selectedOption); // Passa o objeto completo para o React Hook Form
+                setValue("plano", selectedOption);
               }}
               options={opcoesPlano}
-              width="w-full"
-            />
-
-            <InputSelectComponent
-              label="Forma de Pagamento"
-              name="formaPagamento"
-              required
-              error="Selecione uma forma de pagamento!"
-              formulario={formWithSetValue}
-              onChange={(selectedOption: any) => {
-                console.log(
-                  "Forma de pagamento selecionada (objeto completo):",
-                  selectedOption
-                );
-                const value = selectedOption ? selectedOption.value : "";
-                console.log("Valor extraído da forma de pagamento:", value);
-                setFormaPagamento(value);
-                setValue("formaPagamento", selectedOption); // Passa o objeto completo para o React Hook Form
-              }}
-              options={opcoesPagamento}
               width="w-full"
             />
           </div>
