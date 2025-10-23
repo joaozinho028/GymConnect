@@ -1165,7 +1165,6 @@ const iniciarCadastroAluno = async (req, res) => {
   try {
     const { nome_aluno, email_aluno, telefone_aluno, cpf_aluno, plano_aluno } =
       req.body;
-
     const dadosAluno = {
       nome_aluno: nome_aluno?.trim?.() || "",
       email_aluno: email_aluno?.toLowerCase?.().trim?.() || "",
@@ -1176,9 +1175,37 @@ const iniciarCadastroAluno = async (req, res) => {
           ? plano_aluno.toLowerCase()
           : plano_aluno?.value?.toLowerCase?.() || "",
     };
-
-    // Busca o valor do plano no banco
     const { id_empresa, id_filial } = req.user;
+
+    // Verifica se CPF já existe
+    const { data: alunoCpf } = await supabase
+      .from("alunos")
+      .select("id_aluno")
+      .eq("cpf_aluno", dadosAluno.cpf_aluno)
+      .eq("id_empresa", id_empresa)
+      .single();
+
+    if (alunoCpf) {
+      return res
+        .status(400)
+        .json({ error: "CPF já cadastrado para outro aluno." });
+    }
+
+    // Verifica se e-mail já existe
+    const { data: alunoEmail } = await supabase
+      .from("alunos")
+      .select("id_aluno")
+      .eq("email_aluno", dadosAluno.email_aluno)
+      .eq("id_empresa", id_empresa)
+      .single();
+
+    if (alunoEmail) {
+      return res
+        .status(400)
+        .json({ error: "E-mail já cadastrado para outro aluno." });
+    }
+
+    // ...continua o fluxo normal...
     let valorPlano;
     try {
       valorPlano = await buscarValorPlano(id_empresa, dadosAluno.plano_aluno);
@@ -1186,7 +1213,6 @@ const iniciarCadastroAluno = async (req, res) => {
       return res.status(400).json({ error: e.message });
     }
 
-    // Gera o link de pagamento passando o valor
     const link = await criarLinkPagamento(dadosAluno, id_empresa, valorPlano);
 
     if (!link || !link.url) {
@@ -1195,7 +1221,6 @@ const iniciarCadastroAluno = async (req, res) => {
         .json({ error: "Erro ao gerar link de pagamento." });
     }
 
-    // ...após criar o link...
     await supabase.from("alunos_temp").insert({
       id_empresa,
       id_filial,
@@ -1208,7 +1233,6 @@ const iniciarCadastroAluno = async (req, res) => {
       created_at: new Date().toISOString(),
     });
 
-    // Retorna o link para o front
     return res.status(200).json({
       success: true,
       paymentLinkId: link.id,
@@ -1250,7 +1274,10 @@ const confirmarPagamentoLink = async (req, res) => {
           ...dadosAluno,
           matricula_aluno,
           forma_pagamento:
-            linkStatus.payments[0]?.billingType?.toLowerCase() || "indefinido",
+            Array.isArray(linkStatus.payments) && linkStatus.payments.length > 0
+              ? linkStatus.payments[0].billingType?.toLowerCase() ||
+                "indefinido"
+              : "indefinido",
           situacao: "regular",
           status_aluno: true,
           id_empresa: dadosAluno.id_empresa,

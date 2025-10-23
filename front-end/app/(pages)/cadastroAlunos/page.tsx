@@ -121,6 +121,14 @@ const CadastrarAluno = ({ ...rest }: any) => {
                 ${data.paymentLinkUrl}
               </a>
               <br/><br/>
+                <div id="swal-preloader" style="display:flex;align-items:center;gap:10px;">
+                <span class="swal2-loader" style="display:inline-block;width:24px;height:24px;border:3px solid #2563eb;border-radius:50%;border-top-color:transparent;animation:swal-spin 1s linear infinite;"></span>
+                <span>Aguardando confirmação do pagamento...</span>
+              </div>
+              <style>
+                @keyframes swal-spin { 100% { transform: rotate(360deg); } }
+              </style>
+              <br/><br/>
               <a href="${urlWhatsApp}" target="_blank"
                 style="
                   display:inline-flex;
@@ -141,14 +149,6 @@ const CadastrarAluno = ({ ...rest }: any) => {
               >
                 Enviar pelo WhatsApp
               </a>
-              <br/><br/>
-              <div id="swal-preloader" style="display:flex;align-items:center;gap:10px;">
-                <span class="swal2-loader" style="display:inline-block;width:24px;height:24px;border:3px solid #2563eb;border-radius:50%;border-top-color:transparent;animation:swal-spin 1s linear infinite;"></span>
-                <span>Aguardando confirmação do pagamento...</span>
-              </div>
-              <style>
-                @keyframes swal-spin { 100% { transform: rotate(360deg); } }
-              </style>
             </div>
           `,
           allowOutsideClick: false,
@@ -178,6 +178,11 @@ const CadastrarAluno = ({ ...rest }: any) => {
                   }
                 );
                 const result = await response.json();
+                console.log(
+                  "Resposta da API confirmar-pagamento-link:",
+                  result
+                ); // <-- ADICIONE AQUI
+
                 if (result.success) {
                   swalClosed = true;
                   Swal.close();
