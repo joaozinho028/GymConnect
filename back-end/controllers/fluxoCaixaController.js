@@ -131,8 +131,70 @@ const excluirCategoria = async (req, res) => {
   }
 };
 
+// Listar transações
+const listarTransacoes = async (req, res) => {
+  const { id_empresa } = req.user;
+  const { mes, filial } = req.query;
+  let query = supabase
+    .from("fluxo_caixa")
+    .select("*")
+    .eq("id_empresa", id_empresa);
+
+  if (mes) query = query.eq("month", mes);
+  if (filial) query = query.eq("filial", filial);
+
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+};
+
+// Criar transação
+const criarTransacao = async (req, res) => {
+  const { id_empresa } = req.user;
+  const transacao = { ...req.body, id_empresa };
+  const { data, error } = await supabase
+    .from("fluxo_caixa")
+    .insert(transacao)
+    .select()
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(201).json(data);
+};
+
+// Editar transação
+const editarTransacao = async (req, res) => {
+  const { id_empresa } = req.user;
+  const { id } = req.params;
+  const { data, error } = await supabase
+    .from("fluxo_caixa")
+    .update({ ...req.body })
+    .eq("id", id)
+    .eq("id_empresa", id_empresa)
+    .select()
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+};
+
+// Excluir transação
+const excluirTransacao = async (req, res) => {
+  const { id_empresa } = req.user;
+  const { id } = req.params;
+  const { error } = await supabase
+    .from("fluxo_caixa")
+    .delete()
+    .eq("id", id)
+    .eq("id_empresa", id_empresa);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
+};
+
 module.exports = {
   cadastrarCategorias,
   listarCategorias,
   excluirCategoria,
+  listarTransacoes,
+  criarTransacao,
+  editarTransacao,
+  excluirTransacao,
 };

@@ -74,157 +74,86 @@ const CadastrarAluno = ({ ...rest }: any) => {
       id_filial: user?.id_filial,
     };
 
-    Swal.fire({
+    // MOCK: Link de pagamento fixo para simulação
+    const mockPaymentLink = "https://sandbox.asaas.com/i/SEU-LINK-MOCKADO-AQUI";
+
+    // Mensagem para WhatsApp
+    const mensagem = `Olá ${nome}, seu link de pagamento do plano ${planoValue} está pronto! Clique para pagar: ${mockPaymentLink}`;
+    const telefoneWhatsApp = telefone.replace(/\D/g, "");
+    const urlWhatsApp = `https://wa.me/55${telefoneWhatsApp}?text=${encodeURIComponent(
+      mensagem
+    )}`;
+
+    // Exibe modal com preloader, link e botão WhatsApp
+    let swalClosed = false;
+    await Swal.fire({
       icon: "info",
-      title: "Aguarde",
-      text: "Gerando link de pagamento...",
+      title: "Aguardando pagamento...",
+      html: `
+        <div style="text-align:left;">
+          <p><strong>Link de pagamento:</strong></p>
+          <a href="${mockPaymentLink}" target="_blank" style="word-break:break-all; color:#2563eb; text-decoration:underline;">
+            ${mockPaymentLink}
+          </a>
+          <br/><br/>
+          <a href="${urlWhatsApp}" target="_blank"
+            style="
+              display:inline-flex;
+              align-items:center;
+              gap:8px;
+              background:#25D366;
+              color:#fff;
+              font-weight:600;
+              border-radius:6px;
+              padding:10px 18px;
+              font-size:16px;
+              text-decoration:none;
+              box-shadow:0 2px 8px rgba(37,211,102,0.15);
+              transition:background 0.2s;
+            "
+            onmouseover="this.style.background='#1DA851'"
+            onmouseout="this.style.background='#25D366'"
+          >
+            Enviar pelo WhatsApp
+          </a>
+          <br/><br/>
+          <div id="swal-preloader" style="display:flex;align-items:center;gap:10px;">
+            <span class="swal2-loader" style="display:inline-block;width:24px;height:24px;border:3px solid #2563eb;border-radius:50%;border-top-color:transparent;animation:swal-spin 1s linear infinite;"></span>
+            <span>Aguardando confirmação do pagamento...</span>
+          </div>
+          <style>
+            @keyframes swal-spin { 100% { transform: rotate(360deg); } }
+          </style>
+        </div>
+      `,
       allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
       didOpen: () => {
         Swal.showLoading();
+        setTimeout(() => {
+          if (!swalClosed) {
+            swalClosed = true;
+            Swal.close();
+            Swal.fire({
+              icon: "success",
+              title: "Cadastro realizado!",
+              text: "Pagamento confirmado e aluno cadastrado.",
+            });
+            limparFormulario();
+          }
+        }, 15000); // 15 segundos
       },
     });
 
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/alunos/iniciar-cadastro-aluno`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(aluno),
-        }
-      );
-      const data = await response.json();
-      Swal.close();
-
-      if (data.success && data.paymentLinkUrl) {
-        setPaymentLinkId(data.paymentLinkId);
-        setDadosAluno(aluno);
-
-        const mensagem = `Olá ${nome}, seu link de pagamento do plano ${plano} está pronto! Clique para pagar: ${data.paymentLinkUrl}`;
-        const telefoneWhatsApp = telefone.replace(/\D/g, "");
-        const urlWhatsApp = `https://wa.me/55${telefoneWhatsApp}?text=${encodeURIComponent(
-          mensagem
-        )}`;
-
-        // Exibe modal com preloader e bloqueio de fechamento
-        let swalClosed = false;
-        const swalInstance = await Swal.fire({
-          icon: "info",
-          title: "Aguardando pagamento...",
-          html: `
-            <div style="text-align:left;">
-              <p><strong>Link de pagamento:</strong></p>
-              <a href="${data.paymentLinkUrl}" target="_blank" style="word-break:break-all; color:#2563eb; text-decoration:underline;">
-                ${data.paymentLinkUrl}
-              </a>
-              <br/><br/>
-                <div id="swal-preloader" style="display:flex;align-items:center;gap:10px;">
-                <span class="swal2-loader" style="display:inline-block;width:24px;height:24px;border:3px solid #2563eb;border-radius:50%;border-top-color:transparent;animation:swal-spin 1s linear infinite;"></span>
-                <span>Aguardando confirmação do pagamento...</span>
-              </div>
-              <style>
-                @keyframes swal-spin { 100% { transform: rotate(360deg); } }
-              </style>
-              <br/><br/>
-              <a href="${urlWhatsApp}" target="_blank"
-                style="
-                  display:inline-flex;
-                  align-items:center;
-                  gap:8px;
-                  background:#25D366;
-                  color:#fff;
-                  font-weight:600;
-                  border-radius:6px;
-                  padding:10px 18px;
-                  font-size:16px;
-                  text-decoration:none;
-                  box-shadow:0 2px 8px rgba(37,211,102,0.15);
-                  transition:background 0.2s;
-                "
-                onmouseover="this.style.background='#1DA851'"
-                onmouseout="this.style.background='#25D366'"
-              >
-                Enviar pelo WhatsApp
-              </a>
-            </div>
-          `,
-          allowOutsideClick: false,
-          allowEscapeKey: false,
-          showConfirmButton: false,
-          didOpen: () => {
-            Swal.showLoading();
-            // Inicia polling para verificar pagamento
-            const interval = setInterval(async () => {
-              if (swalClosed) {
-                clearInterval(interval);
-                return;
-              }
-              try {
-                const response = await fetch(
-                  `${process.env.NEXT_PUBLIC_API_URL}/alunos/confirmar-pagamento-link`,
-                  {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                      Authorization: `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({
-                      paymentLinkId: data.paymentLinkId,
-                      dadosAluno: aluno,
-                    }),
-                  }
-                );
-                const result = await response.json();
-                console.log(
-                  "Resposta da API confirmar-pagamento-link:",
-                  result
-                ); // <-- ADICIONE AQUI
-
-                if (result.success) {
-                  swalClosed = true;
-                  Swal.close();
-                  Swal.fire({
-                    icon: "success",
-                    title: "Cadastro realizado!",
-                    text: "Pagamento confirmado e aluno cadastrado.",
-                  });
-                  limparFormulario();
-                  clearInterval(interval);
-                }
-              } catch {}
-            }, 5000); // verifica a cada 5 segundos
-
-            // Fecha o swal automaticamente após 5 minutos (300000 ms)
-            setTimeout(() => {
-              if (!swalClosed) {
-                swalClosed = true;
-                Swal.close();
-                Swal.fire({
-                  icon: "warning",
-                  title: "Tempo esgotado",
-                  text: "O pagamento não foi identificado em até 5 minutos. Tente novamente.",
-                });
-              }
-            }, 300000);
-          },
-        });
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "Erro",
-          text: data.error || "Erro ao gerar link de pagamento.",
-        });
-      }
-    } catch (error) {
-      Swal.fire({
-        icon: "error",
-        title: "Erro de Conexão",
-        text: "Erro ao conectar com o servidor. Verifique sua conexão e tente novamente.",
-      });
-    }
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/alunos/cadastrar`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(aluno),
+    });
   };
 
   // 2. Confirma pagamento e cadastra aluno

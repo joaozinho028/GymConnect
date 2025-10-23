@@ -2,8 +2,8 @@
 
 import ModalComponent from "@/components/Modal/ModalComponent";
 import { parseISO } from "date-fns";
-import { Copy, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -52,12 +52,12 @@ const MONTHS = [
   "Dezembro",
 ];
 
-// Simulando muitas filiais para teste
-const filiais = Array.from(
-  { length: 50 },
-  (_, i) =>
-    `Filial ${String.fromCharCode(65 + (i % 26))}${Math.floor(i / 26) || ""}`
-);
+// Filiais e matriz
+const filiais = [
+  "Academia PowerFit", // Matriz
+  "PowerFit São Miguel", // Filial 1
+  "PowerFit Alvorada", // Filial 2
+];
 
 const PIE_COLORS = [
   "#60a5fa",
@@ -70,89 +70,173 @@ const PIE_COLORS = [
   "#a3a3a3",
 ];
 
-// Dados fictícios expandidos para todas as filiais
-const generateInitialData = () => {
-  const data: Record<
-    string,
-    { month: string; entrada: number; saida: number }[]
-  > = {};
-
-  filiais.forEach((filial, index) => {
-    data[filial] = MONTHS.map((month, monthIndex) => ({
-      month,
-      entrada: Math.floor(Math.random() * 15000) + 5000 + index * 100, // Varia entre 5000-20000
-      saida: Math.floor(Math.random() * 8000) + 2000 + index * 50, // Varia entre 2000-10000
-    }));
-  });
-
-  return data;
-};
-
-const initialData = generateInitialData();
-
-// Preenche meses faltantes
-const fillMissingMonths = (
-  data: { month: string; entrada: number; saida: number }[]
-) =>
-  MONTHS.map(
-    (month) =>
-      data.find((m) => m.month === month) || { month, entrada: 0, saida: 0 }
-  );
-
-// Dados consolidados para fluxo geral
-const allCashFlowData = MONTHS.map((month) => {
-  const entrada = Object.values(initialData).reduce(
-    (sum, arr) => sum + (arr.find((m) => m.month === month)?.entrada || 0),
-    0
-  );
-  const saida = Object.values(initialData).reduce(
-    (sum, arr) => sum + (arr.find((m) => m.month === month)?.saida || 0),
-    0
-  );
-  return { month, entrada, saida };
-});
-
-// Dados por filial para entradas
-const entradaDataByFilial: Record<
-  string,
-  { month: string; entrada: number }[]
-> = Object.fromEntries(
-  Object.entries(initialData).map(([filial, data]) => [
-    filial,
-    fillMissingMonths(data).map(({ month, entrada }) => ({ month, entrada })),
-  ])
-);
-
-// Categorias e transações fictícias
+// Categorias
 const initialCategories: Category[] = [
   { id: "1", name: "Mensalidade" },
   { id: "2", name: "Despesas" },
+  { id: "3", name: "Pagamento de Funcionário" },
 ];
 
+// 1. Primeiro: Transações mockadas
 const initialTransactions: Transaction[] = [
-  {
-    id: "1",
-    date: "2025-08-05",
-    description: "Mensalidade Cliente X",
-    category: "Mensalidade",
-    paymentMethod: "Pix",
-    type: "entrada",
-    value: 1200,
-    month: "Agosto",
-    filial: "Filial A",
-  },
-  {
-    id: "2",
-    date: "2025-08-07",
-    description: "Compra Material",
-    category: "Despesas",
-    paymentMethod: "Cartão",
-    type: "saida",
-    value: 450,
-    month: "Agosto",
-    filial: "Filial A",
-  },
+  ...MONTHS.slice(0, new Date().getMonth() + 1).flatMap((month, idx) => [
+    // Matriz
+    {
+      id: `matriz-mensalidade-${idx + 1}`,
+      date: `${new Date().getFullYear()}-${String(idx + 1).padStart(
+        2,
+        "0"
+      )}-05`,
+      description: `Mensalidade João Vítor (${month})`,
+      category: "Mensalidade",
+      paymentMethod: "Pix",
+      type: "entrada" as "entrada",
+      value: 1500,
+      month,
+      filial: "Academia PowerFit",
+    },
+    {
+      id: `matriz-despesa-${idx + 1}`,
+      date: `${new Date().getFullYear()}-${String(idx + 1).padStart(
+        2,
+        "0"
+      )}-10`,
+      description: `Compra de equipamentos (${month})`,
+      category: "Despesas",
+      paymentMethod: "Cartão",
+      type: "saida" as "saida",
+      value: 3200,
+      month,
+      filial: "Academia PowerFit",
+    },
+    {
+      id: `matriz-pagfunc-${idx + 1}`,
+      date: `${new Date().getFullYear()}-${String(idx + 1).padStart(
+        2,
+        "0"
+      )}-15`,
+      description: `Pagamento Funcionário - Maria (${month})`,
+      category: "Pagamento de Funcionário",
+      paymentMethod: "Transferência",
+      type: "saida" as "saida",
+      value: 2200,
+      month,
+      filial: "Academia PowerFit",
+    },
+    // Filial 1
+    {
+      id: `filial1-mensalidade-${idx + 1}`,
+      date: `${new Date().getFullYear()}-${String(idx + 1).padStart(
+        2,
+        "0"
+      )}-06`,
+      description: `Mensalidade Cliente X (${month})`,
+      category: "Mensalidade",
+      paymentMethod: "Pix",
+      type: "entrada" as "entrada",
+      value: 1100,
+      month,
+      filial: "Gym Evolution",
+    },
+    {
+      id: `filial1-despesa-${idx + 1}`,
+      date: `${new Date().getFullYear()}-${String(idx + 1).padStart(
+        2,
+        "0"
+      )}-11`,
+      description: `Compra de material de limpeza (${month})`,
+      category: "Despesas",
+      paymentMethod: "Cartão",
+      type: "saida" as "saida",
+      value: 400,
+      month,
+      filial: "Gym Evolution",
+    },
+    {
+      id: `filial1-pagfunc-${idx + 1}`,
+      date: `${new Date().getFullYear()}-${String(idx + 1).padStart(
+        2,
+        "0"
+      )}-16`,
+      description: `Pagamento Funcionário - José (${month})`,
+      category: "Pagamento de Funcionário",
+      paymentMethod: "Transferência",
+      type: "saida" as "saida",
+      value: 1800,
+      month,
+      filial: "Gym Evolution",
+    },
+    // Filial 2
+    {
+      id: `filial2-mensalidade-${idx + 1}`,
+      date: `${new Date().getFullYear()}-${String(idx + 1).padStart(
+        2,
+        "0"
+      )}-07`,
+      description: `Mensalidade Cliente Y (${month})`,
+      category: "Mensalidade",
+      paymentMethod: "Pix",
+      type: "entrada" as "entrada",
+      value: 900,
+      month,
+      filial: "Academia Vida Ativa",
+    },
+    {
+      id: `filial2-despesa-${idx + 1}`,
+      date: `${new Date().getFullYear()}-${String(idx + 1).padStart(
+        2,
+        "0"
+      )}-12`,
+      description: `Despesas administrativas (${month})`,
+      category: "Despesas",
+      paymentMethod: "Cartão",
+      type: "saida" as "saida",
+      value: 600,
+      month,
+      filial: "Academia Vida Ativa",
+    },
+    {
+      id: `filial2-pagfunc-${idx + 1}`,
+      date: `${new Date().getFullYear()}-${String(idx + 1).padStart(
+        2,
+        "0"
+      )}-17`,
+      description: `Pagamento Funcionário - Ana (${month})`,
+      category: "Pagamento de Funcionário",
+      paymentMethod: "Transferência",
+      type: "saida" as "saida",
+      value: 1600,
+      month,
+      filial: "Academia Vida Ativa",
+    },
+  ]),
 ];
+
+// 2. Depois: Use initialTransactions para gerar os dados dos gráficos
+const allCashFlowData = MONTHS.map((month) => {
+  const entrada = initialTransactions
+    .filter((t) => t.month === month && t.type === "entrada")
+    .reduce((sum, t) => sum + t.value, 0);
+  const saida = initialTransactions
+    .filter((t) => t.month === month && t.type === "saida")
+    .reduce((sum, t) => sum + t.value, 0);
+  return { month, entrada, saida };
+});
+
+const entradaDataByFilial: Record<
+  string,
+  { month: string; entrada: number }[]
+> = {};
+filiais.forEach((filial) => {
+  entradaDataByFilial[filial] = MONTHS.map((month) => {
+    const entrada = initialTransactions
+      .filter(
+        (t) => t.month === month && t.filial === filial && t.type === "entrada"
+      )
+      .reduce((sum, t) => sum + t.value, 0);
+    return { month, entrada };
+  });
+});
 
 // Funções de exportação/cópia
 function exportToCSV(data: Transaction[]) {
@@ -211,7 +295,9 @@ function copyTable(data: Transaction[]) {
 // Componente principal
 export default function FluxoCaixaPage() {
   // Estados principais
-  const [activeTab, setActiveTab] = useState<"geral" | "filiais">("geral");
+  const [activeTab, setActiveTab] = useState<"geral" | "filiais" | "nova">(
+    "geral"
+  );
   const [selectedMonths, setSelectedMonths] = useState<string[]>([
     MONTHS[new Date().getMonth()],
   ]);
@@ -353,10 +439,9 @@ export default function FluxoCaixaPage() {
 
     const map: Record<string, number> = {};
     filteredTransactions.forEach((t) => {
-      if (t.type === "saida") {
-        const key = t.category;
-        map[key] = (map[key] || 0) + Math.abs(t.value);
-      }
+      // Remove o filtro de tipo
+      const key = t.category;
+      map[key] = (map[key] || 0) + Math.abs(t.value);
     });
     return Object.entries(map).map(([name, value]) => ({ name, value }));
   }, [filteredTransactions, activeTab]);
@@ -404,7 +489,7 @@ export default function FluxoCaixaPage() {
             paymentMethod: "Pix",
             type: "entrada",
             value: 0,
-            month: MONTHS[new Date().getMonth()],
+            month: MONTHS[new Date().getFullYear()],
             filial: filiais[0],
           }
     );
@@ -439,11 +524,18 @@ export default function FluxoCaixaPage() {
     setShowTransactionModal(false);
     setEditTransaction(null);
     setTransactionForm(null);
+    setActiveTab("geral"); // Volta para a aba geral
   };
 
   const handleDeleteTransaction = (id: string) => {
     setTransactions(transactions.filter((t) => t.id !== id));
   };
+
+  useEffect(() => {
+    if (activeTab === "nova") {
+      handleOpenTransactionModal();
+    }
+  }, [activeTab]);
 
   return (
     <div className="p-2 sm:p-4 max-w-7xl mx-auto space-y-6">
@@ -470,6 +562,16 @@ export default function FluxoCaixaPage() {
           >
             Entradas por Filiais
           </button>
+          <button
+            onClick={() => setActiveTab("nova")}
+            className={`cursor-pointer py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "nova"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            Nova Transação
+          </button>
         </nav>
       </div>
 
@@ -477,21 +579,47 @@ export default function FluxoCaixaPage() {
       {activeTab === "geral" && (
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
           <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:gap-2">
-            <button
+            {/* <button
               title="Nova Transação"
               className="bg-blue-100 w-full sm:w-auto p-2 rounded hover:bg-blue-200 cursor-pointer text-sm"
               onClick={() => handleOpenTransactionModal()}
             >
               Nova Transação
-            </button>
-            <button
+            </button> */}
+            {/* <button
               title="Gerar Relatório"
               className="bg-gray-100 w-full sm:w-auto p-2 rounded hover:bg-gray-200 cursor-pointer flex items-center gap-2 text-sm"
             >
               <Copy size={16} /> <span>Gerar Relatório</span>
-            </button>
+            </button> */}
           </div>
         </div>
+      )}
+
+      {activeTab === "geral" && (
+        <>
+          {/* Seleção de meses */}
+          <div className="bg-white shadow rounded-lg p-3 sm:p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+              <div className="flex flex-wrap gap-2 items-center">
+                <label className="text-sm font-medium mr-2">Meses:</label>
+                {MONTHS.map((month) => (
+                  <button
+                    key={month}
+                    onClick={() => toggleMonth(month)}
+                    className={`px-3 py-1 rounded-full text-xs sm:text-sm border ${
+                      selectedMonths.includes(month)
+                        ? "bg-green-500 text-white"
+                        : "bg-gray-100"
+                    }`}
+                  >
+                    {month}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Conteúdo da aba Geral */}
@@ -533,7 +661,7 @@ export default function FluxoCaixaPage() {
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="bg-white shadow rounded-lg p-3 sm:p-4">
               <h2 className="font-semibold mb-4">Fluxo de Caixa Geral</h2>
-              <ResponsiveContainer width="100%" height={260}>
+              <ResponsiveContainer width="100%" height={340}>
                 <BarChart
                   data={filteredGeneralData}
                   onClick={(e: any) => {
@@ -557,7 +685,7 @@ export default function FluxoCaixaPage() {
             </div>
             <div className="bg-white shadow rounded-lg p-3 sm:p-4">
               <h2 className="font-semibold mb-4">Gráfico por Categoria</h2>
-              <ResponsiveContainer width="100%" height={260}>
+              <ResponsiveContainer width="100%" height={340}>
                 <PieChart>
                   <Tooltip
                     formatter={(value: any) =>
@@ -750,7 +878,7 @@ export default function FluxoCaixaPage() {
                 ? `Entradas por Mês - ${selectedFilial}`
                 : "Comparativo de Entradas por Filial"}
             </h2>
-            <ResponsiveContainer width="100%" height={400}>
+            <ResponsiveContainer width="100%" height={480}>
               <BarChart
                 data={
                   filialViewMode === "individual"
@@ -789,196 +917,30 @@ export default function FluxoCaixaPage() {
         </>
       )}
 
-      {/* Seleção de meses */}
-      <div className="bg-white shadow rounded-lg p-3 sm:p-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-          <div className="flex flex-wrap gap-2 items-center">
-            <label className="text-sm font-medium mr-2">Meses:</label>
-            {MONTHS.map((month) => (
-              <button
-                key={month}
-                onClick={() => toggleMonth(month)}
-                className={`px-3 py-1 rounded-full text-xs sm:text-sm border ${
-                  selectedMonths.includes(month)
-                    ? "bg-green-500 text-white"
-                    : "bg-gray-100"
-                }`}
-              >
-                {month}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Extrato de transações (apenas na aba geral) */}
-      {activeTab === "geral" && (
-        <div className="bg-white shadow rounded-lg p-2 sm:p-4 mt-6">
-          <h2 className="font-semibold mb-4">Transações</h2>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 mb-6">
-            <div className="flex flex-col gap-2 w-full sm:w-1/2">
-              <div className="relative w-full">
-                <input
-                  type="text"
-                  placeholder="Buscar.."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  className="w-full h-[38px] p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-[#222222] pl-10 text-sm"
-                />
-                <Copy
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  size={18}
-                />
-              </div>
-              {/* Filtro por data */}
-              <div className="flex gap-2 mt-2">
-                <input
-                  type="date"
-                  value={dateStart}
-                  onChange={(e) => {
-                    setDateStart(e.target.value);
-                    setPage(1);
-                  }}
-                  className="border rounded px-2 py-1 text-xs sm:text-sm"
-                  placeholder="Data inicial"
-                  max={dateEnd || undefined}
-                />
-                <span className="text-gray-400 text-xs flex items-center">
-                  até
-                </span>
-                <input
-                  type="date"
-                  value={dateEnd}
-                  onChange={(e) => {
-                    setDateEnd(e.target.value);
-                    setPage(1);
-                  }}
-                  className="border rounded px-2 py-1 text-xs sm:text-sm"
-                  placeholder="Data final"
-                  min={dateStart || undefined}
-                />
+      {activeTab === "filiais" && (
+        <>
+          {/* Seleção de meses */}
+          <div className="bg-white shadow rounded-lg p-3 sm:p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+              <div className="flex flex-wrap gap-2 items-center">
+                <label className="text-sm font-medium mr-2">Meses:</label>
+                {MONTHS.map((month) => (
+                  <button
+                    key={month}
+                    onClick={() => toggleMonth(month)}
+                    className={`px-3 py-1 rounded-full text-xs sm:text-sm border ${
+                      selectedMonths.includes(month)
+                        ? "bg-green-500 text-white"
+                        : "bg-gray-100"
+                    }`}
+                  >
+                    {month}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
-          <div className="overflow-x-auto w-full">
-            <table
-              className="w-full min-w-[700px] sm:min-w-full divide-y divide-gray-200 text-xs sm:text-sm"
-              style={{ tableLayout: "fixed" }}
-            >
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-2 py-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase">
-                    Ação
-                  </th>
-                  <th className="px-2 py-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase">
-                    Data
-                  </th>
-                  <th className="px-2 py-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase">
-                    Descrição
-                  </th>
-                  <th className="px-2 py-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase">
-                    Categoria
-                  </th>
-                  <th className="px-2 py-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase">
-                    Filial
-                  </th>
-                  <th className="px-2 py-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase">
-                    Tipo
-                  </th>
-                  <th className="px-2 py-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase">
-                    Pagamento
-                  </th>
-                  <th className="px-2 py-2 sm:px-4 text-left text-xs font-medium text-gray-500 uppercase">
-                    Valor
-                  </th>
-                </tr>
-              </thead>
-              <tbody
-                className="bg-white divide-y divide-gray-100"
-                style={{ height: "300px" }}
-              >
-                {pageItems.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-6 text-gray-400">
-                      Nenhuma transação encontrada.
-                    </td>
-                  </tr>
-                ) : (
-                  <>
-                    {pageItems.map((t) => (
-                      <tr
-                        key={t.id}
-                        className="hover:bg-gray-50"
-                        style={{ height: "60px" }}
-                      >
-                        <td className="px-2 py-2 sm:px-4 flex gap-2">
-                          <button
-                            title="Editar"
-                            className="p-2 rounded cursor-pointer hover:bg-gray-100 text-green-600"
-                            onClick={() => handleOpenTransactionModal(t)}
-                            type="button"
-                          >
-                            <Copy size={18} />
-                          </button>
-                          <button
-                            title="Excluir"
-                            className="p-2 rounded cursor-pointer hover:bg-gray-100 text-red-600"
-                            onClick={() => handleDeleteTransaction(t.id)}
-                            type="button"
-                          >
-                            <Copy size={18} />
-                          </button>
-                        </td>
-                        <td className="px-2 py-2 sm:px-4">{t.date}</td>
-                        <td className="px-2 py-2 sm:px-4">{t.description}</td>
-                        <td className="px-2 py-2 sm:px-4">{t.category}</td>
-                        <td className="px-2 py-2 sm:px-4">{t.filial}</td>
-                        <td className="px-2 py-2 sm:px-4">
-                          {t.type === "entrada" ? "Entrada" : "Saída"}
-                        </td>
-                        <td className="px-2 py-2 sm:px-4">{t.paymentMethod}</td>
-                        <td className="px-2 py-2 sm:px-4">
-                          R$ {t.value.toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                    {Array.from({ length: 5 - pageItems.length }).map(
-                      (_, idx) => (
-                        <tr key={`empty-${idx}`} style={{ height: "60px" }}>
-                          <td colSpan={8} />
-                        </tr>
-                      )
-                    )}
-                  </>
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex items-center justify-between mt-4">
-            <div className="text-sm text-gray-600">
-              Página {page} de {totalPages}
-            </div>
-            <div className="flex gap-2">
-              <button
-                className="px-3 py-1 border rounded cursor-pointer bg-blue-100"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                Anterior
-              </button>
-              <button
-                className="px-3 py-1 border rounded cursor-pointer bg-blue-100"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-              >
-                Próxima
-              </button>
-            </div>
-          </div>
-        </div>
+        </>
       )}
 
       {/* Modal de transação */}
@@ -986,7 +948,10 @@ export default function FluxoCaixaPage() {
         <ModalComponent
           header={editTransaction ? "Editar Transação" : "Nova Transação"}
           opened={showTransactionModal}
-          onClose={() => setShowTransactionModal(false)}
+          onClose={() => {
+            setShowTransactionModal(false);
+            setActiveTab("geral"); // Volta para a aba geral
+          }}
         >
           <TransacaoPage />
         </ModalComponent>

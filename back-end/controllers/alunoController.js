@@ -1,14 +1,6 @@
 const supabase = require("../db");
 const auditoriaService = require("../utils/auditoriaService");
 const { validarCPF, validarEmail, limparCPF } = require("../utils/validadores");
-const {
-  gerarBoleto,
-  processarPIX,
-  processarCartaoCredito,
-  calcularValorPlano,
-  criarLinkPagamento,
-  asaasRequest,
-} = require("./asaasController");
 
 const registrarAuditoria = async (
   id_empresa,
@@ -77,51 +69,6 @@ const gerarMatriculaUnica = async (id_empresa, id_filial) => {
   return timestamp;
 };
 
-// const buscarValorPlano = async (req, res) => {
-//   const id_empresa = req.user;
-//   const { ciclo_pagamento_plano } = req.body;
-//   console.log("🔎 Buscando valor do plano:", {
-//     id_empresa,
-//     ciclo_pagamento_plano,
-//   });
-
-//   const { data, error } = await supabase
-//     .from("planos")
-//     .select("valor_plano")
-//     .eq("id_empresa", id_empresa)
-//     .eq("ciclo_pagamento_plano", ciclo_pagamento_plano)
-//     .single();
-
-//   console.log("📦 Resultado da busca no banco:", { data, error });
-
-//   if (error || !data) {
-//     throw new Error("Plano não encontrado para esta empresa.");
-//   }
-//   return Number(data.valor_plano);
-// };
-
-const buscarValorPlano = async (id_empresa, ciclo_pagamento_plano) => {
-  // Valores fixos para cada ciclo
-  const valores = {
-    Mensal: 150,
-    Trimestral: 170,
-    Semestral: 600,
-    Anual: 300,
-  };
-
-  // Tenta normalizar o ciclo para bater com as chaves do objeto
-  let ciclo = ciclo_pagamento_plano;
-  if (typeof ciclo === "string") {
-    ciclo = ciclo.charAt(0).toUpperCase() + ciclo.slice(1).toLowerCase();
-  }
-
-  const valor = valores[ciclo];
-  if (!valor) {
-    throw new Error("Plano não encontrado para esta empresa.");
-  }
-  return valor;
-};
-
 const cadastrarAluno = async (req, res) => {
   try {
     const {
@@ -131,7 +78,6 @@ const cadastrarAluno = async (req, res) => {
       cpf_aluno,
       plano_aluno,
       forma_pagamento,
-      dados_cartao, // Novo campo para dados do cartão
     } = req.body;
 
     const { id_empresa, id_filial, id_usuario } = req.user;
@@ -222,259 +168,49 @@ const cadastrarAluno = async (req, res) => {
           : plano_aluno?.value?.toLowerCase?.() || "",
     };
 
-    let dadosResposta = {};
+    // Gerar matrícula única
+    const matricula_aluno = await gerarMatriculaUnica(id_empresa, id_filial);
 
-    // Processar de acordo com a forma de pagamento
-    if (forma_pagamento === "boleto") {
-      console.log("🎫 Processando BOLETO...");
+    // Cadastrar aluno
+    const { data: novoAluno, error: erroAluno } = await supabase
+      .from("alunos")
+      .insert({
+        ...dadosAluno,
+        matricula_aluno,
+        forma_pagamento,
+        situacao: "regular",
+        status_aluno: true,
+        id_empresa,
+        id_filial,
+        data_cadastro: new Date().toISOString(),
+      })
+      .select()
+      .single();
 
-      try {
-        // Gerar boleto via Asaas
-        const resultadoBoleto = await gerarBoleto(dadosAluno);
-
-        // Gerar matrícula única
-        const matricula_aluno = await gerarMatriculaUnica(
-          id_empresa,
-          id_filial
-        );
-
-        // Cadastrar aluno com status "aguardando_pagamento"
-        const { data: novoAluno, error: erroAluno } = await supabase
-          .from("alunos")
-          .insert({
-            ...dadosAluno,
-            matricula_aluno,
-            forma_pagamento,
-            situacao: "aguardando pagamento",
-            status_aluno: true, // Conforme sua regra
-            id_empresa,
-            id_filial,
-            asaas_payment_id: resultadoBoleto.id, // Guardar ID do Asaas
-            asaas_customer_id: resultadoBoleto.customer_id,
-            data_cadastro: new Date().toISOString(),
-          })
-          .select()
-          .single();
-
-        if (erroAluno) {
-          console.error("Erro ao inserir aluno:", erroAluno);
-          return res.status(500).json({
-            error: "Erro ao cadastrar aluno",
-            tipo: "database_erro",
-          });
-        }
-
-        // Registrar transação
-        const valorPlano = calcularValorPlano(plano_aluno);
-        await supabase.from("transacoes").insert({
-          id_empresa,
-          id_filial,
-          id_aluno: novoAluno.id_aluno,
-          id_usuario,
-          valor: valorPlano,
-          metodo_pagamento: "boleto",
-          status: false, // Pendente até confirmação
-          asaas_payment_id: resultadoBoleto.id,
-        });
-
-        // Registrar auditoria
-        const cpfFormatado = formatarCPFParaAuditoria(cpfLimpo);
-        const descricaoAuditoria = `Cadastrou o aluno: ${nome_aluno} (CPF: ${cpfFormatado}, Matrícula: ${matricula_aluno}). Plano: ${plano_aluno}, Pagamento: Boleto gerado, Situação: aguardando pagamento`;
-
-        await registrarAuditoria(
-          id_empresa,
-          id_usuario,
-          id_filial,
-          "CADASTRO_ALUNO",
-          descricaoAuditoria
-        );
-
-        dadosResposta = {
-          message: "Aluno cadastrado com sucesso! Boleto gerado.",
-          tipo: "boleto",
-          aluno: novoAluno,
-          boleto: {
-            id: resultadoBoleto.id,
-            valor: resultadoBoleto.valor,
-            vencimento: resultadoBoleto.vencimento,
-            linkBoleto: resultadoBoleto.linkBoleto,
-            linkVisualizacao: resultadoBoleto.linkVisualizacao,
-            codigoBarras: resultadoBoleto.codigoBarras,
-          },
-        };
-      } catch (error) {
-        console.error("❌ Erro ao processar boleto:", error.message);
-        return res.status(500).json({
-          error: "Erro ao gerar boleto. Tente novamente.",
-          tipo: "pagamento_erro",
-          detalhe: error.message,
-        });
-      }
-    } else if (forma_pagamento === "pix") {
-      console.log("💳 Processando PIX...");
-
-      try {
-        // Processar PIX via Asaas
-        const resultadoPIX = await processarPIX(dadosAluno);
-
-        // Para PIX, retorna os dados para o frontend mostrar o QR Code
-        // NÃO cadastra o aluno ainda - só depois da confirmação do pagamento
-        dadosResposta = {
-          message: "PIX gerado com sucesso! Escaneie o QR Code para pagar.",
-          tipo: "pix",
-          pix: {
-            id: resultadoPIX.id,
-            valor: resultadoPIX.valor,
-            qrCodePix: resultadoPIX.qrCodePix,
-            qrCodeImage: resultadoPIX.qrCodeImage,
-            expiraEm: resultadoPIX.expiraEm,
-          },
-          // Dados temporários para completar cadastro após pagamento
-          dadosAluno: {
-            ...dadosAluno,
-            asaas_payment_id: resultadoPIX.id,
-            asaas_customer_id: resultadoPIX.customer_id,
-            id_empresa,
-            id_filial,
-            id_usuario,
-          },
-        };
-      } catch (error) {
-        console.error("❌ Erro ao processar PIX:", error.message);
-        return res.status(500).json({
-          error: "Erro ao gerar PIX. Tente novamente.",
-          tipo: "pagamento_erro",
-          detalhe: error.message,
-        });
-      }
-    } else if (forma_pagamento === "credito" || forma_pagamento === "debito") {
-      console.log(`💳 Processando ${forma_pagamento.toUpperCase()}...`);
-
-      // Validar dados do cartão
-      if (
-        !dados_cartao ||
-        !dados_cartao.numeroCartao ||
-        !dados_cartao.nomeCartao ||
-        !dados_cartao.mesVencimento ||
-        !dados_cartao.anoVencimento ||
-        !dados_cartao.cvv
-      ) {
-        return res.status(400).json({
-          error: "Dados do cartão são obrigatórios",
-          tipo: "validacao_erro",
-        });
-      }
-
-      try {
-        // Processar cartão via Asaas
-        const resultadoCartao = await processarCartaoCredito(
-          dadosAluno,
-          dados_cartao
-        );
-
-        if (resultadoCartao.aprovado) {
-          // PAGAMENTO APROVADO: Cadastrar aluno
-
-          const matricula_aluno = await gerarMatriculaUnica(
-            id_empresa,
-            id_filial
-          );
-
-          const { data: novoAluno, error: erroAluno } = await supabase
-            .from("alunos")
-            .insert({
-              ...dadosAluno,
-              matricula_aluno,
-              forma_pagamento,
-              situacao: "regular",
-              status_aluno: true,
-              id_empresa,
-              id_filial,
-              asaas_payment_id: resultadoCartao.id,
-              asaas_customer_id: resultadoCartao.customer_id,
-              data_cadastro: new Date().toISOString(),
-            })
-            .select()
-            .single();
-
-          if (erroAluno) {
-            console.error("Erro ao inserir aluno:", erroAluno);
-            return res.status(500).json({
-              error: "Erro ao cadastrar aluno após pagamento aprovado",
-              tipo: "database_erro",
-            });
-          }
-
-          // Registrar transação aprovada
-          const valorPlano = calcularValorPlano(plano_aluno);
-          await supabase.from("transacoes").insert({
-            id_empresa,
-            id_filial,
-            id_aluno: novoAluno.id_aluno,
-            id_usuario,
-            valor: valorPlano,
-            metodo_pagamento: forma_pagamento,
-            status: true, // Aprovado
-            asaas_payment_id: resultadoCartao.id,
-          });
-
-          // Registrar auditoria
-          const cpfFormatado = formatarCPFParaAuditoria(cpfLimpo);
-          const descricaoAuditoria = `Cadastrou o aluno: ${nome_aluno} (CPF: ${cpfFormatado}, Matrícula: ${matricula_aluno}). Plano: ${plano_aluno}, Pagamento: ${forma_pagamento} aprovado, Situação: regular`;
-
-          await registrarAuditoria(
-            id_empresa,
-            id_usuario,
-            id_filial,
-            "CADASTRO_ALUNO",
-            descricaoAuditoria
-          );
-
-          dadosResposta = {
-            message: `Pagamento via ${forma_pagamento} aprovado! Aluno cadastrado com sucesso.`,
-            tipo: "pagamento_aprovado",
-            aluno: novoAluno,
-            pagamento: {
-              id: resultadoCartao.id,
-              valor: resultadoCartao.valor,
-              metodo: forma_pagamento,
-            },
-          };
-        } else {
-          // PAGAMENTO REJEITADO: Não cadastrar aluno
-          dadosResposta = {
-            message:
-              "Pagamento rejeitado. Verifique os dados do cartão e tente novamente.",
-            tipo: "pagamento_rejeitado",
-            erro: resultadoCartao.motivo_rejeicao || "Cartão recusado",
-            pagamento: {
-              id: resultadoCartao.id,
-              status: resultadoCartao.status,
-            },
-          };
-
-          return res.status(400).json(dadosResposta);
-        }
-      } catch (error) {
-        console.error(
-          `❌ Erro ao processar ${forma_pagamento}:`,
-          error.message
-        );
-        return res.status(500).json({
-          error: `Erro ao processar pagamento via ${forma_pagamento}. Tente novamente.`,
-          tipo: "pagamento_erro",
-          detalhe: error.message,
-        });
-      }
-    } else {
-      return res.status(400).json({
-        error: "Forma de pagamento inválida",
-        tipo: "validacao_erro",
+    if (erroAluno) {
+      console.error("Erro ao inserir aluno:", erroAluno);
+      return res.status(500).json({
+        error: "Erro ao cadastrar aluno",
+        tipo: "database_erro",
       });
     }
 
-    console.log("✅ Cadastro processado com sucesso:", dadosResposta.tipo);
-    res.status(201).json(dadosResposta);
+    // Registrar auditoria
+    const cpfFormatado = formatarCPFParaAuditoria(cpfLimpo);
+    const descricaoAuditoria = `Cadastrou o aluno: ${nome_aluno} (CPF: ${cpfFormatado}, Matrícula: ${matricula_aluno}). Plano: ${plano_aluno}, Situação: regular`;
+
+    await registrarAuditoria(
+      id_empresa,
+      id_usuario,
+      id_filial,
+      "CADASTRO_ALUNO",
+      descricaoAuditoria
+    );
+
+    res.status(201).json({
+      message: "Aluno cadastrado com sucesso!",
+      aluno: novoAluno,
+    });
   } catch (error) {
     console.error("❌ Erro geral no cadastro de aluno:", error);
     res.status(500).json({
@@ -1206,122 +942,28 @@ const iniciarCadastroAluno = async (req, res) => {
     }
 
     // ...continua o fluxo normal...
-    let valorPlano;
-    try {
-      valorPlano = await buscarValorPlano(id_empresa, dadosAluno.plano_aluno);
-    } catch (e) {
-      return res.status(400).json({ error: e.message });
-    }
-
-    const link = await criarLinkPagamento(dadosAluno, id_empresa, valorPlano);
-
-    if (!link || !link.url) {
-      return res
-        .status(500)
-        .json({ error: "Erro ao gerar link de pagamento." });
-    }
-
-    await supabase.from("alunos_temp").insert({
-      id_empresa,
-      id_filial,
-      nome_aluno: dadosAluno.nome_aluno,
-      email_aluno: dadosAluno.email_aluno,
-      telefone_aluno: dadosAluno.telefone_aluno,
-      cpf_aluno: dadosAluno.cpf_aluno,
-      plano_aluno: dadosAluno.plano_aluno,
-      asaas_payment_link_id: link.id,
-      created_at: new Date().toISOString(),
-    });
+    // Aqui você pode adicionar lógica extra se necessário
 
     return res.status(200).json({
       success: true,
-      paymentLinkId: link.id,
-      paymentLinkUrl: link.url,
-      valor: link.value,
-      descricao: link.description,
+      message: "Aluno pode ser cadastrado.",
     });
   } catch (error) {
-    console.error("Erro ao gerar link de pagamento:", error);
+    console.error("Erro ao verificar cadastro de aluno:", error);
     return res
       .status(500)
-      .json({ error: "Erro interno ao gerar link de pagamento." });
-  }
-};
-const confirmarPagamentoLink = async (req, res) => {
-  try {
-    const { paymentLinkId, dadosAluno } = req.body;
-
-    // Consulta status do link
-    const linkStatus = await asaasRequest(
-      `/paymentLinks/${paymentLinkId}`,
-      "GET"
-    );
-
-    // Forçar status para teste
-    linkStatus.status = "RECEIVED";
-
-    // Verifica se foi pago
-    if (linkStatus.status === "RECEIVED") {
-      // Cadastrar aluno normalmente
-      const matricula_aluno = await gerarMatriculaUnica(
-        dadosAluno.id_empresa,
-        dadosAluno.id_filial
-      );
-
-      const { data: novoAluno, error: erroAluno } = await supabase
-        .from("alunos")
-        .insert({
-          ...dadosAluno,
-          matricula_aluno,
-          forma_pagamento:
-            Array.isArray(linkStatus.payments) && linkStatus.payments.length > 0
-              ? linkStatus.payments[0].billingType?.toLowerCase() ||
-                "indefinido"
-              : "indefinido",
-          situacao: "regular",
-          status_aluno: true,
-          id_empresa: dadosAluno.id_empresa,
-          id_filial: dadosAluno.id_filial,
-          data_cadastro: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (erroAluno) {
-        return res
-          .status(500)
-          .json({ error: "Erro ao cadastrar aluno após pagamento." });
-      }
-
-      return res.status(201).json({
-        success: true,
-        message: "Pagamento confirmado e aluno cadastrado!",
-        aluno: novoAluno,
-        forma_pagamento: linkStatus.payments[0]?.billingType,
-      });
-    } else {
-      return res.status(400).json({
-        success: false,
-        message: "Pagamento ainda não realizado.",
-        status: linkStatus.status,
-      });
-    }
-  } catch (error) {
-    console.error("Erro ao confirmar pagamento do link:", error);
-    return res.status(500).json({ error: "Erro ao confirmar pagamento." });
+      .json({ error: "Erro interno ao verificar cadastro de aluno." });
   }
 };
 
 module.exports = {
   cadastrarAluno,
   consultarAlunos,
-  calcularValorPlano,
   gerarMatriculaUnica,
   obterEstatisticasAlunos,
   editarAlunos,
   importarAlunos,
   alterarStatusAluno,
   iniciarCadastroAluno,
-  confirmarPagamentoLink,
-  buscarValorPlano,
 };
+

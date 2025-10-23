@@ -37,7 +37,7 @@ export default function CadastrarCategoriaFluxo() {
     setIsLoading(true);
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/fluxoCaixa/listar-categorias`,
+        `${process.env.NEXT_PUBLIC_API_URL}/fluxo-caixa/listar-categorias`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -97,7 +97,7 @@ export default function CadastrarCategoriaFluxo() {
   const onSubmitFunction = async (values: any) => {
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/fluxoCaixa/cadastrar-categorias`,
+        `${process.env.NEXT_PUBLIC_API_URL}/fluxo-caixa/cadastrar-categorias`,
         {
           method: "POST",
           headers: {
@@ -167,7 +167,7 @@ export default function CadastrarCategoriaFluxo() {
 
       if (result.isConfirmed) {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/fluxoCaixa/excluir-categorias/${id}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/fluxo-caixa/excluir-categorias/${id}`,
           {
             method: "DELETE",
             headers: {

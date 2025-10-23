@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const {
   iniciarCadastroAluno,
-  confirmarPagamentoLink,
   consultarAlunos,
   obterEstatisticasAlunos,
   editarAlunos,
@@ -12,12 +11,6 @@ const {
 const authMiddleware = require("../middleware/authMiddleware");
 
 router.post("/iniciar-cadastro-aluno", authMiddleware, iniciarCadastroAluno);
-
-router.post(
-  "/confirmar-pagamento-link",
-  authMiddleware,
-  confirmarPagamentoLink
-);
 
 // Routes existentes
 router.get("/consultar-alunos", authMiddleware, consultarAlunos);
