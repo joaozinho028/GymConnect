@@ -293,10 +293,28 @@ const listarFiliais = async (req, res) => {
   }
 };
 
+const listarPlanos = async (req, res) => {
+  try {
+    const id_empresa = req.user.id_empresa;
+    const { data, error } = await supabase
+      .from("planos")
+      .select("id_plano, valor_plano, ciclo_pagamento_plano")
+      .eq("id_empresa", id_empresa);
+
+    if (error) {
+      return res.status(500).json({ message: "Erro ao buscar planos", error });
+    }
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ message: "Erro no servidor" });
+  }
+};
+
 module.exports = {
   cadastrarFilial,
   editarFilial,
   ConsultarFiliais,
   listarPerfis,
   listarFiliais,
+  listarPlanos,
 };

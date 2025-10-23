@@ -77,25 +77,49 @@ const gerarMatriculaUnica = async (id_empresa, id_filial) => {
   return timestamp;
 };
 
+// const buscarValorPlano = async (req, res) => {
+//   const id_empresa = req.user;
+//   const { ciclo_pagamento_plano } = req.body;
+//   console.log("🔎 Buscando valor do plano:", {
+//     id_empresa,
+//     ciclo_pagamento_plano,
+//   });
+
+//   const { data, error } = await supabase
+//     .from("planos")
+//     .select("valor_plano")
+//     .eq("id_empresa", id_empresa)
+//     .eq("ciclo_pagamento_plano", ciclo_pagamento_plano)
+//     .single();
+
+//   console.log("📦 Resultado da busca no banco:", { data, error });
+
+//   if (error || !data) {
+//     throw new Error("Plano não encontrado para esta empresa.");
+//   }
+//   return Number(data.valor_plano);
+// };
+
 const buscarValorPlano = async (id_empresa, ciclo_pagamento_plano) => {
-  console.log("🔎 Buscando valor do plano:", {
-    id_empresa,
-    ciclo_pagamento_plano,
-  });
+  // Valores fixos para cada ciclo
+  const valores = {
+    Mensal: 150,
+    Trimestral: 170,
+    Semestral: 600,
+    Anual: 300,
+  };
 
-  const { data, error } = await supabase
-    .from("planos")
-    .select("valor_plano")
-    .eq("id_empresa", id_empresa)
-    .eq("ciclo_pagamento_plano", ciclo_pagamento_plano)
-    .single();
+  // Tenta normalizar o ciclo para bater com as chaves do objeto
+  let ciclo = ciclo_pagamento_plano;
+  if (typeof ciclo === "string") {
+    ciclo = ciclo.charAt(0).toUpperCase() + ciclo.slice(1).toLowerCase();
+  }
 
-  console.log("📦 Resultado da busca no banco:", { data, error });
-
-  if (error || !data) {
+  const valor = valores[ciclo];
+  if (!valor) {
     throw new Error("Plano não encontrado para esta empresa.");
   }
-  return Number(data.valor_plano);
+  return valor;
 };
 
 const cadastrarAluno = async (req, res) => {
@@ -188,11 +212,14 @@ const cadastrarAluno = async (req, res) => {
 
     // Preparar dados do aluno
     const dadosAluno = {
-      nome_aluno: nome_aluno.trim(),
-      email_aluno: email_aluno.toLowerCase().trim(),
-      telefone_aluno: telefone_aluno.trim(),
-      cpf_aluno: cpfLimpo,
-      plano_aluno: plano_aluno.toLowerCase(),
+      nome_aluno: nome_aluno?.trim?.() || "",
+      email_aluno: email_aluno?.toLowerCase?.().trim?.() || "",
+      telefone_aluno: telefone_aluno?.trim?.() || "",
+      cpf_aluno: cpf_aluno?.replace?.(/\D/g, "") || "",
+      plano_aluno:
+        typeof plano_aluno === "string"
+          ? plano_aluno.toLowerCase()
+          : plano_aluno?.value?.toLowerCase?.() || "",
     };
 
     let dadosResposta = {};
@@ -1139,19 +1166,19 @@ const iniciarCadastroAluno = async (req, res) => {
     const { nome_aluno, email_aluno, telefone_aluno, cpf_aluno, plano_aluno } =
       req.body;
 
-    // Validações básicas...j
-    // (igual ao seu código atual)
-
     const dadosAluno = {
-      nome_aluno: nome_aluno.trim(),
-      email_aluno: email_aluno.toLowerCase().trim(),
-      telefone_aluno: telefone_aluno.trim(),
-      cpf_aluno: cpf_aluno.replace(/\D/g, ""),
-      plano_aluno: plano_aluno.toLowerCase(),
+      nome_aluno: nome_aluno?.trim?.() || "",
+      email_aluno: email_aluno?.toLowerCase?.().trim?.() || "",
+      telefone_aluno: telefone_aluno?.trim?.() || "",
+      cpf_aluno: cpf_aluno?.replace?.(/\D/g, "") || "",
+      plano_aluno:
+        typeof plano_aluno === "string"
+          ? plano_aluno.toLowerCase()
+          : plano_aluno?.value?.toLowerCase?.() || "",
     };
 
     // Busca o valor do plano no banco
-    const { id_empresa } = req.user;
+    const { id_empresa, id_filial } = req.user;
     let valorPlano;
     try {
       valorPlano = await buscarValorPlano(id_empresa, dadosAluno.plano_aluno);
@@ -1167,6 +1194,19 @@ const iniciarCadastroAluno = async (req, res) => {
         .status(500)
         .json({ error: "Erro ao gerar link de pagamento." });
     }
+
+    // ...após criar o link...
+    await supabase.from("alunos_temp").insert({
+      id_empresa,
+      id_filial,
+      nome_aluno: dadosAluno.nome_aluno,
+      email_aluno: dadosAluno.email_aluno,
+      telefone_aluno: dadosAluno.telefone_aluno,
+      cpf_aluno: dadosAluno.cpf_aluno,
+      plano_aluno: dadosAluno.plano_aluno,
+      asaas_payment_link_id: link.id,
+      created_at: new Date().toISOString(),
+    });
 
     // Retorna o link para o front
     return res.status(200).json({

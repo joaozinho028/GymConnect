@@ -5,7 +5,7 @@ import InputSelectComponent from "@/components/Forms/InputSelect";
 import { useAuth } from "@/contexts/AuthContext";
 import { GetForm } from "@/utils";
 import { ChevronRight, Save } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import * as yup from "yup";
 
@@ -15,6 +15,7 @@ const CadastrarAluno = ({ ...rest }: any) => {
   const [telefone, setTelefone] = useState("");
   const [cpf, setCpf] = useState("");
   const [plano, setPlano] = useState("");
+  const [opcoesPlano, setOpcoesPlano] = useState<any[]>([]);
   const { token, user } = useAuth();
   const [paymentLinkId, setPaymentLinkId] = useState<string | null>(null);
   const [dadosAluno, setDadosAluno] = useState<any>(null);
@@ -37,11 +38,26 @@ const CadastrarAluno = ({ ...rest }: any) => {
     setValue("plano", null);
   };
 
-  const opcoesPlano = [
-    { label: "Mensal", value: "mensal" },
-    { label: "Trimestral", value: "trimestral" },
-    { label: "Anual", value: "anual" },
-  ];
+  useEffect(() => {
+    async function fetchPlanos() {
+      try {
+        const resPlanos = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/empresas/listar-planos`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (resPlanos.ok) {
+          const dataPlanos = await resPlanos.json();
+          setOpcoesPlano(
+            (dataPlanos || []).map((f: any) => ({
+              value: f.ciclo_pagamento_plano, // <-- ciclo, não id!
+              label: f.ciclo_pagamento_plano,
+            }))
+          );
+        }
+      } catch {}
+    }
+    fetchPlanos();
+  }, [token]);
 
   // 1. Envia dados, recebe link de pagamento
   const onSubmitFunction = async () => {
@@ -87,18 +103,17 @@ const CadastrarAluno = ({ ...rest }: any) => {
         setPaymentLinkId(data.paymentLinkId);
         setDadosAluno(aluno);
 
-        // Monta mensagem personalizada
         const mensagem = `Olá ${nome}, seu link de pagamento do plano ${plano} está pronto! Clique para pagar: ${data.paymentLinkUrl}`;
-        // Limpa telefone para formato internacional (ex: 5511999999999)
         const telefoneWhatsApp = telefone.replace(/\D/g, "");
         const urlWhatsApp = `https://wa.me/55${telefoneWhatsApp}?text=${encodeURIComponent(
           mensagem
         )}`;
 
-        // Exibe modal com botão de WhatsApp
-        await Swal.fire({
-          icon: "success",
-          title: "Link gerado!",
+        // Exibe modal com preloader e bloqueio de fechamento
+        let swalClosed = false;
+        const swalInstance = await Swal.fire({
+          icon: "info",
+          title: "Aguardando pagamento...",
           html: `
             <div style="text-align:left;">
               <p><strong>Link de pagamento:</strong></p>
@@ -124,13 +139,72 @@ const CadastrarAluno = ({ ...rest }: any) => {
                 onmouseover="this.style.background='#1DA851'"
                 onmouseout="this.style.background='#25D366'"
               >
-                
                 Enviar pelo WhatsApp
               </a>
+              <br/><br/>
+              <div id="swal-preloader" style="display:flex;align-items:center;gap:10px;">
+                <span class="swal2-loader" style="display:inline-block;width:24px;height:24px;border:3px solid #2563eb;border-radius:50%;border-top-color:transparent;animation:swal-spin 1s linear infinite;"></span>
+                <span>Aguardando confirmação do pagamento...</span>
+              </div>
+              <style>
+                @keyframes swal-spin { 100% { transform: rotate(360deg); } }
+              </style>
             </div>
           `,
+          allowOutsideClick: false,
+          allowEscapeKey: false,
           showConfirmButton: false,
-          showCloseButton: true,
+          didOpen: () => {
+            Swal.showLoading();
+            // Inicia polling para verificar pagamento
+            const interval = setInterval(async () => {
+              if (swalClosed) {
+                clearInterval(interval);
+                return;
+              }
+              try {
+                const response = await fetch(
+                  `${process.env.NEXT_PUBLIC_API_URL}/alunos/confirmar-pagamento-link`,
+                  {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                      paymentLinkId: data.paymentLinkId,
+                      dadosAluno: aluno,
+                    }),
+                  }
+                );
+                const result = await response.json();
+                if (result.success) {
+                  swalClosed = true;
+                  Swal.close();
+                  Swal.fire({
+                    icon: "success",
+                    title: "Cadastro realizado!",
+                    text: "Pagamento confirmado e aluno cadastrado.",
+                  });
+                  limparFormulario();
+                  clearInterval(interval);
+                }
+              } catch {}
+            }, 5000); // verifica a cada 5 segundos
+
+            // Fecha o swal automaticamente após 5 minutos (300000 ms)
+            setTimeout(() => {
+              if (!swalClosed) {
+                swalClosed = true;
+                Swal.close();
+                Swal.fire({
+                  icon: "warning",
+                  title: "Tempo esgotado",
+                  text: "O pagamento não foi identificado em até 5 minutos. Tente novamente.",
+                });
+              }
+            }, 300000);
+          },
         });
       } else {
         Swal.fire({

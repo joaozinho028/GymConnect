@@ -11,11 +11,13 @@ const auditoriaRoutes = require("./routes/auditoria");
 const precificacaoRoutes = require("./routes/precificacao");
 const dadosBancariosRoutes = require("./routes/dadosBancarios");
 const fluxoCaixaRoutes = require("./routes/fluxoCaixa");
+const asaasRoutes = require("./routes/asaas");
 const supabase = require("./db");
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); // <-- já existe
+app.use(express.urlencoded({ extended: true })); // <-- ADICIONE AQUI
 
 app.use("/auth", authRoutes);
 app.use("/usuarios", usuarioRoutes);
@@ -26,10 +28,11 @@ app.use("/auditoria", auditoriaRoutes);
 app.use("/precificacao", precificacaoRoutes);
 app.use("/dadosBancarios", dadosBancariosRoutes);
 app.use("/fluxoCaixa", fluxoCaixaRoutes);
+app.use("/asaas", asaasRoutes);
 
 app.get("/", (req, res) => {
   res.send("API está rodando.");
-}); 
+});
 
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
