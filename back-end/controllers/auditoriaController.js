@@ -1,66 +1,106 @@
-const db = require("../db");
+const supabase = require("../db");
 
 const auditoriaController = {
   /**
-   * Obtém todos os registros de auditoria com filtros opcionais
+   * Obtém todos os registros de auditoria da empresa do usuário logado
    */
   getAll: async (req, res) => {
     try {
-      const { id_empresa, id_filial, data_inicio, data_fim, acao, id_usuario } =
-        req.query;
+      console.log("Usuário logado:", req.user);
 
-      let query = `
-        SELECT a.*, 
-               u.nome as nome_usuario,
-               e.nome_fantasia as nome_empresa,
-               f.nome as nome_filial
-        FROM auditoria a
-        LEFT JOIN usuario u ON a.id_usuario = u.id_usuario
-        LEFT JOIN empresa e ON a.id_empresa = e.id_empresa
-        LEFT JOIN filial f ON a.id_filial = f.id_filial
-        WHERE 1=1
-      `;
+      const { id_empresa } = req.user;
 
-      const params = [];
-      let paramIndex = 1;
-
-      if (id_empresa) {
-        query += ` AND a.id_empresa = $${paramIndex++}`;
-        params.push(id_empresa);
+      if (!id_empresa) {
+        return res.status(400).json({
+          error: "ID da empresa não encontrado no token do usuário",
+        });
       }
 
-      if (id_filial) {
-        query += ` AND a.id_filial = $${paramIndex++}`;
-        params.push(id_filial);
+      // Busca apenas os dados da auditoria filtrados pela empresa
+      // Ordenando por criado_em descendente (mais atual primeiro)
+      const { data, error } = await supabase
+        .from("auditoria")
+        .select("*")
+        .eq("id_empresa", id_empresa)
+        .order("criado_em", { ascending: false })
+        .limit(1000);
+
+      if (error) {
+        console.error("Erro do Supabase:", error);
+        throw error;
       }
 
-      if (id_usuario) {
-        query += ` AND a.id_usuario = $${paramIndex++}`;
-        params.push(id_usuario);
+      // Busca dados relacionados se existirem registros
+      let formattedData = data;
+
+      if (data && data.length > 0) {
+        // Pega IDs únicos para buscar dados relacionados
+        const userIds = [
+          ...new Set(data.map((item) => item.id_usuario).filter(Boolean)),
+        ];
+        const filialIds = [
+          ...new Set(data.map((item) => item.id_filial).filter(Boolean)),
+        ];
+
+        // Busca dados dos usuários
+        let usuarios = [];
+        if (userIds.length > 0) {
+          const { data: usersData, error: usersError } = await supabase
+            .from("usuarios")
+            .select("id_usuario, nome_usuario")
+            .in("id_usuario", userIds);
+
+          if (!usersError) {
+            usuarios = usersData || [];
+          }
+        }
+
+        // Busca dados das filiais
+        let filiais = [];
+        if (filialIds.length > 0) {
+          const { data: filiaisData, error: filiaisError } = await supabase
+            .from("filiais")
+            .select("id_filial, nome_filial")
+            .in("id_filial", filialIds);
+
+          if (!filiaisError) {
+            filiais = filiaisData || [];
+          }
+        }
+
+        // Busca dados da empresa
+        const { data: empresaData, error: empresaError } = await supabase
+          .from("empresa")
+          .select("id_empresa, nome_fantasia")
+          .eq("id_empresa", id_empresa)
+          .single();
+
+        // Formata os dados combinando as informações
+        formattedData = data.map((item) => {
+          const usuario = usuarios.find(
+            (u) => u.id_usuario === item.id_usuario
+          );
+          const filial = filiais.find((f) => f.id_filial === item.id_filial);
+
+          return {
+            ...item,
+            nome_usuario: usuario?.nome_usuario || null,
+            nome_empresa: empresaData?.nome_fantasia || null,
+            nome_filial: filial?.nome_filial || null,
+            data_hora: item.criado_em, // Adiciona o campo data_hora
+          };
+        });
       }
 
-      if (acao) {
-        query += ` AND a.acao = $${paramIndex++}`;
-        params.push(acao);
-      }
+      console.log("Número de registros encontrados:", formattedData.length);
 
-      if (data_inicio) {
-        query += ` AND a.data_acao >= $${paramIndex++}`;
-        params.push(data_inicio);
-      }
-
-      if (data_fim) {
-        query += ` AND a.data_acao <= $${paramIndex++}`;
-        params.push(data_fim);
-      }
-
-      query += " ORDER BY a.data_acao DESC";
-
-      const result = await db.query(query, params);
-      res.status(200).json(result.rows);
+      res.status(200).json(formattedData);
     } catch (error) {
-      console.error("Erro ao buscar registros de auditoria:", error);
-      res.status(500).json({ error: "Erro ao buscar registros de auditoria" });
+      console.error("Erro detalhado ao buscar registros de auditoria:", error);
+      res.status(500).json({
+        error: "Erro ao buscar registros de auditoria",
+        details: error.message,
+      });
     }
   },
 
@@ -70,31 +110,68 @@ const auditoriaController = {
   getById: async (req, res) => {
     try {
       const { id } = req.params;
+      const { id_empresa } = req.user;
 
-      const query = `
-        SELECT a.*, 
-               u.nome as nome_usuario,
-               e.nome_fantasia as nome_empresa,
-               f.nome as nome_filial
-        FROM auditoria a
-        LEFT JOIN usuario u ON a.id_usuario = u.id_usuario
-        LEFT JOIN empresa e ON a.id_empresa = e.id_empresa
-        LEFT JOIN filial f ON a.id_filial = f.id_filial
-        WHERE a.id_auditoria = $1
-      `;
+      const { data, error } = await supabase
+        .from("auditoria")
+        .select("*")
+        .eq("id_auditoria", id)
+        .eq("id_empresa", id_empresa)
+        .single();
 
-      const result = await db.query(query, [id]);
-
-      if (result.rows.length === 0) {
-        return res
-          .status(404)
-          .json({ error: "Registro de auditoria não encontrado" });
+      if (error) {
+        if (error.code === "PGRST116") {
+          return res
+            .status(404)
+            .json({ error: "Registro de auditoria não encontrado" });
+        }
+        throw error;
       }
 
-      res.status(200).json(result.rows[0]);
+      // Busca dados relacionados
+      let formattedData = {
+        ...data,
+        data_hora: data.criado_em, // Adiciona o campo data_hora
+      };
+
+      // Busca usuário se existir
+      if (data.id_usuario) {
+        const { data: userData } = await supabase
+          .from("usuarios")
+          .select("nome_usuario")
+          .eq("id_usuario", data.id_usuario)
+          .single();
+
+        formattedData.nome_usuario = userData?.nome_usuario || null;
+      }
+
+      // Busca filial se existir
+      if (data.id_filial) {
+        const { data: filialData } = await supabase
+          .from("filiais")
+          .select("nome_filial")
+          .eq("id_filial", data.id_filial)
+          .single();
+
+        formattedData.nome_filial = filialData?.nome_filial || null;
+      }
+
+      // Busca empresa
+      const { data: empresaData } = await supabase
+        .from("empresa")
+        .select("nome_fantasia")
+        .eq("id_empresa", id_empresa)
+        .single();
+
+      formattedData.nome_empresa = empresaData?.nome_fantasia || null;
+
+      res.status(200).json(formattedData);
     } catch (error) {
       console.error("Erro ao buscar registro de auditoria:", error);
-      res.status(500).json({ error: "Erro ao buscar registro de auditoria" });
+      res.status(500).json({
+        error: "Erro ao buscar registro de auditoria",
+        details: error.message,
+      });
     }
   },
 
@@ -104,7 +181,7 @@ const auditoriaController = {
   getByEntidade: async (req, res) => {
     try {
       const { entidade, id_entidade } = req.params;
-      const { id_empresa } = req.query;
+      const { id_empresa } = req.user;
 
       // Mapeia o tipo de entidade para a descrição que contém o ID da entidade
       let descricaoPattern;
@@ -135,36 +212,78 @@ const auditoriaController = {
           return res.status(400).json({ error: "Tipo de entidade inválido" });
       }
 
-      const params = [descricaoPattern];
-      let query = `
-        SELECT a.*, 
-               u.nome as nome_usuario,
-               e.nome_fantasia as nome_empresa,
-               f.nome as nome_filial
-        FROM auditoria a
-        LEFT JOIN usuario u ON a.id_usuario = u.id_usuario
-        LEFT JOIN empresa e ON a.id_empresa = e.id_empresa
-        LEFT JOIN filial f ON a.id_filial = f.id_filial
-        WHERE a.descricao ILIKE $1
-      `;
+      const { data, error } = await supabase
+        .from("auditoria")
+        .select("*")
+        .eq("id_empresa", id_empresa)
+        .ilike("descricao", descricaoPattern)
+        .order("criado_em", { ascending: false });
 
-      if (id_empresa) {
-        query += ` AND a.id_empresa = $2`;
-        params.push(id_empresa);
+      if (error) {
+        throw error;
       }
 
-      query += ` ORDER BY a.data_acao DESC`;
+      // Busca dados relacionados (mesmo processo do getAll)
+      let formattedData = data;
 
-      const result = await db.query(query, params);
-      res.status(200).json(result.rows);
+      if (data && data.length > 0) {
+        const userIds = [
+          ...new Set(data.map((item) => item.id_usuario).filter(Boolean)),
+        ];
+        const filialIds = [
+          ...new Set(data.map((item) => item.id_filial).filter(Boolean)),
+        ];
+
+        let usuarios = [];
+        if (userIds.length > 0) {
+          const { data: usersData } = await supabase
+            .from("usuarios")
+            .select("id_usuario, nome_usuario")
+            .in("id_usuario", userIds);
+          usuarios = usersData || [];
+        }
+
+        let filiais = [];
+        if (filialIds.length > 0) {
+          const { data: filiaisData } = await supabase
+            .from("filiais")
+            .select("id_filial, nome_filial")
+            .in("id_filial", filialIds);
+          filiais = filiaisData || [];
+        }
+
+        const { data: empresaData } = await supabase
+          .from("empresa")
+          .select("id_empresa, nome_fantasia")
+          .eq("id_empresa", id_empresa)
+          .single();
+
+        formattedData = data.map((item) => {
+          const usuario = usuarios.find(
+            (u) => u.id_usuario === item.id_usuario
+          );
+          const filial = filiais.find((f) => f.id_filial === item.id_filial);
+
+          return {
+            ...item,
+            nome_usuario: usuario?.nome_usuario || null,
+            nome_empresa: empresaData?.nome_fantasia || null,
+            nome_filial: filial?.nome_filial || null,
+            data_hora: item.criado_em, // Adiciona o campo data_hora
+          };
+        });
+      }
+
+      res.status(200).json(formattedData);
     } catch (error) {
       console.error(
         "Erro ao buscar registros de auditoria por entidade:",
         error
       );
-      res
-        .status(500)
-        .json({ error: "Erro ao buscar registros de auditoria por entidade" });
+      res.status(500).json({
+        error: "Erro ao buscar registros de auditoria por entidade",
+        details: error.message,
+      });
     }
   },
 };

@@ -14,6 +14,7 @@ import {
   BarChart2,
   Building2,
   ChevronDown,
+  DownloadCloud,
   GraduationCap,
   LayoutDashboard,
   LogOut,
@@ -155,6 +156,15 @@ const Header: FC<HeaderProps> = () => {
                 >
                   <Search size={14} />
                   Consulta de Alunos
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/importarAlunos"
+                  className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded cursor-pointer"
+                >
+                  <DownloadCloud size={14} />
+                  Importar Alunos
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -300,6 +310,13 @@ const Header: FC<HeaderProps> = () => {
                     onClick={() => setSidebarOpen(false)}
                   >
                     <Search size={16} /> Consulta de Alunos
+                  </Link>
+                  <Link
+                    href="/importarAlunos"
+                    className="flex items-center gap-2 py-1 text-black hover:underline"
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <DownloadCloud size={16} /> Importar Alunos
                   </Link>
                 </div>
               </div>

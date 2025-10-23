@@ -14,7 +14,7 @@ const cadastrarCategorias = async (req, res) => {
 
     // Verificar se a categoria já existe para esta empresa
     const { data: categoriaExistente, error: errorCheck } = await supabase
-      .from("categorias_financeiro")
+      .from("categorias_fluxo_caixa")
       .select("id_categoria")
       .eq("id_empresa", id_empresa)
       .eq("nome_categoria", name)
@@ -26,7 +26,7 @@ const cadastrarCategorias = async (req, res) => {
 
     // Inserir nova categoria
     const { data, error } = await supabase
-      .from("categorias_financeiro")
+      .from("categorias_fluxo_caixa")
       .insert({
         id_empresa,
         nome_categoria: name,
@@ -62,7 +62,7 @@ const listarCategorias = async (req, res) => {
     const id_empresa = req.user.id_empresa;
 
     const { data, error } = await supabase
-      .from("categorias_financeiro")
+      .from("categorias_fluxo_caixa")
       .select("id_categoria, nome_categoria")
       .eq("id_empresa", id_empresa)
       .order("nome_categoria", { ascending: true });
@@ -98,7 +98,7 @@ const excluirCategoria = async (req, res) => {
 
     // Verificar se a categoria existe e pertence à empresa
     const { data: categoriaExistente, error: errorCheck } = await supabase
-      .from("categorias_financeiro")
+      .from("categorias_fluxo_caixa")
       .select("id_categoria")
       .eq("id_categoria", id)
       .eq("id_empresa", id_empresa)
@@ -110,7 +110,7 @@ const excluirCategoria = async (req, res) => {
 
     // Excluir a categoria
     const { error } = await supabase
-      .from("categorias_financeiro")
+      .from("categorias_fluxo_caixa")
       .delete()
       .eq("id_categoria", id)
       .eq("id_empresa", id_empresa);

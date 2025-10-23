@@ -1,73 +1,55 @@
 "use client";
 
-import Button from "@/components/Forms/Button";
-import Input from "@/components/Forms/Input";
-import InputSelectComponent from "@/components/Forms/InputSelect";
 import { useAuth } from "@/contexts/AuthContext";
-import { GetForm } from "@/utils";
 import {
+  ChevronLeft,
+  ChevronRight,
   Copy,
   FileDown,
   FileSpreadsheet,
   FileText,
   Search,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import * as yup from "yup";
+import { useEffect, useMemo, useState } from "react";
 
-// Mock de logs do sistema
-const logsMock = [
-  {
-    id: 1,
-    filial: "1",
-    tipo: "Filial",
-    acao: "Cadastro de Filial",
-    usuario: "Admin",
-    data: "10/08/2025 10:00",
-  },
-  {
-    id: 2,
-    filial: "2",
-    tipo: "Aluno",
-    acao: "Edição de Aluno",
-    usuario: "João",
-    data: "11/08/2025 12:30",
-  },
-  {
-    id: 3,
-    filial: "1",
-    tipo: "Usuário",
-    acao: "Exclusão de Usuário",
-    usuario: "Maria",
-    data: "12/08/2025 09:15",
-  },
-  {
-    id: 4,
-    filial: "1",
-    tipo: "Perfil",
-    acao: "Cadastro de Perfil",
-    usuario: "Admin",
-    data: "12/08/2025 11:00",
-  },
-  {
-    id: 5,
-    filial: "2",
-    tipo: "Configuração App",
-    acao: "Edição de Informações para o aplicativo",
-    usuario: "Admin",
-    data: "13/08/2025 14:45",
-  },
-];
+// Função para determinar as cores da ação
+const getActionStyle = (acao: string) => {
+  const acaoLower = acao?.toLowerCase() || "";
+
+  // Cores para diferentes tipos de ação
+  if (acaoLower.includes("cadastrou") || acaoLower.includes("importou")) {
+    return "bg-green-100 text-green-700 border border-green-200";
+  }
+
+  if (acaoLower.includes("editou")) {
+    return "bg-blue-100 text-blue-700 border border-blue-200";
+  }
+
+  if (acaoLower.includes("inativou")) {
+    return "bg-red-100 text-red-700 border border-red-200";
+  }
+
+  if (acaoLower.includes("ativou")) {
+    return "bg-emerald-100 text-emerald-700 border border-emerald-200";
+  }
+
+  if (acaoLower.includes("removeu") || acaoLower.includes("excluiu")) {
+    return "bg-orange-100 text-orange-700 border border-orange-200";
+  }
+
+  // Cor padrão para ações não categorizadas
+  return "bg-gray-100 text-gray-700 border border-gray-200";
+};
 
 // Funções de exportação
 function exportToCSV(data: any[]) {
-  const header = ["Data", "Usuário", "Tipo", "Ação", "Filial"];
+  const header = ["Data/Hora", "Usuário", "Ação", "Filial", "Descrição"];
   const rows = data.map((log) => [
-    log.data,
-    log.usuario,
-    log.tipo,
+    new Date(log.data_hora).toLocaleString(),
+    log.nome_usuario || "N/A",
     log.acao,
-    `Filial ${log.filial}`,
+    log.nome_filial || "N/A",
+    log.descricao,
   ]);
   const csvContent = [header, ...rows]
     .map((e) => e.map((v) => `"${v}"`).join(","))
@@ -76,7 +58,7 @@ function exportToCSV(data: any[]) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.setAttribute("download", "logs.csv");
+  link.setAttribute("download", "auditoria.csv");
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -90,28 +72,34 @@ function exportToPDF(data: any[]) {
   const printWindow = window.open("", "_blank");
   if (!printWindow) return;
   const header = `<tr>
-      <th style="padding:4px;border:1px solid #ccc;">Data</th>
+      <th style="padding:4px;border:1px solid #ccc;">Data/Hora</th>
       <th style="padding:4px;border:1px solid #ccc;">Usuário</th>
-      <th style="padding:4px;border:1px solid #ccc;">Tipo</th>
       <th style="padding:4px;border:1px solid #ccc;">Ação</th>
       <th style="padding:4px;border:1px solid #ccc;">Filial</th>
+      <th style="padding:4px;border:1px solid #ccc;">Descrição</th>
     </tr>`;
   const rows = data
     .map(
       (log) => `<tr>
-      <td style="padding:4px;border:1px solid #ccc;">${log.data}</td>
-      <td style="padding:4px;border:1px solid #ccc;">${log.usuario}</td>
-      <td style="padding:4px;border:1px solid #ccc;">${log.tipo}</td>
+      <td style="padding:4px;border:1px solid #ccc;">${new Date(
+        log.data_hora
+      ).toLocaleString()}</td>
+      <td style="padding:4px;border:1px solid #ccc;">${
+        log.nome_usuario || "N/A"
+      }</td>
       <td style="padding:4px;border:1px solid #ccc;">${log.acao}</td>
-      <td style="padding:4px;border:1px solid #ccc;">Filial ${log.filial}</td>
+      <td style="padding:4px;border:1px solid #ccc;">${
+        log.nome_filial || "N/A"
+      }</td>
+      <td style="padding:4px;border:1px solid #ccc;">${log.descricao}</td>
     </tr>`
     )
     .join("");
   printWindow.document.write(`
     <html>
-      <head><title>Logs</title></head>
+      <head><title>Auditoria</title></head>
       <body>
-        <h2>Histórico de Logs</h2>
+        <h2>Auditoria</h2>
         <table style="border-collapse:collapse;width:100%">${header}${rows}</table>
       </body>
     </html>
@@ -121,171 +109,332 @@ function exportToPDF(data: any[]) {
 }
 
 function copyTable(data: any[]) {
-  const header = ["Data", "Usuário", "Tipo", "Ação", "Filial"];
+  const header = ["Data/Hora", "Usuário", "Ação", "Filial", "Descrição"];
   const rows = data.map((log) => [
-    log.data,
-    log.usuario,
-    log.tipo,
+    new Date(log.data_hora).toLocaleString(),
+    log.nome_usuario || "N/A",
     log.acao,
-    `Filial ${log.filial}`,
+    log.nome_filial || "N/A",
+    log.descricao,
   ]);
   const tableText = [header, ...rows].map((e) => e.join("\t")).join("\n");
   navigator.clipboard.writeText(tableText);
   alert("Tabela copiada para a área de transferência!");
 }
 
-const HistoricoUsuario = ({ ...rest }: any) => {
-  const [filial, setFilial] = useState("");
-  const [tipo, setTipo] = useState("");
-  const [usuario, setUsuario] = useState("");
+const HistoricoUsuario = () => {
+  const [auditorias, setAuditorias] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
-  const yupSchema = yup.object().shape({
-    filial: yup.string().required("Selecione a filial"),
-  });
-
-  const { handleSubmit, ...form } = GetForm(yupSchema);
-  const [opcaoFilial, setOpcaoFilial] = useState([]);
   const { token } = useAuth();
 
-  // Filtra logs
-  const logsFiltrados = logsMock.filter(
-    (log) =>
-      (!filial || log.filial === filial) &&
-      (!tipo || log.tipo === tipo) &&
-      (!usuario || log.usuario.toLowerCase().includes(usuario.toLowerCase()))
-  );
+  const buscarAuditorias = async () => {
+    try {
+      setLoading(true);
 
-  useEffect(() => {
-    async function fetchBuscaFiliais() {
-      try {
-        const resFilial = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/empresas/listar-filiais`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        if (resFilial.ok) {
-          const dataFilial = await resFilial.json();
-          setOpcaoFilial(
-            (dataFilial || []).map((f: any) => ({
-              value: f.id_filial ?? f.id,
-              label: f.nome_filial ?? f.nome,
-            }))
-          );
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auditoria`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         }
-      } catch (err) {
-        // Silenciar erro, pode exibir alerta se desejar
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setAuditorias(data);
+      } else {
+        console.error("Erro ao buscar auditorias");
+        setAuditorias([]);
       }
+    } catch (error) {
+      console.error("Erro ao buscar auditorias:", error);
+      setAuditorias([]);
+    } finally {
+      setLoading(false);
     }
-    fetchBuscaFiliais();
-  }, []);
+  };
+
+  // Filtra os dados com base no termo de busca
+  const filteredAuditorias = useMemo(() => {
+    if (!searchTerm) return auditorias;
+
+    return auditorias.filter(
+      (auditoria: any) =>
+        auditoria.nome_usuario
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        auditoria.acao?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        auditoria.nome_filial
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        auditoria.descricao?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [auditorias, searchTerm]);
+
+  // Calcula a paginação
+  const totalPages = Math.ceil(filteredAuditorias.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentAuditorias = filteredAuditorias.slice(startIndex, endIndex);
+
+  // Reset da página quando busca
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  // Carrega auditorias ao inicializar
+  useEffect(() => {
+    if (token) {
+      buscarAuditorias();
+    }
+  }, [token]);
+
   return (
-    <div className="p-4 max-w-7xl mx-auto space-y-8">
-      <h1 className="text-2xl font-semibold">Histórico do Sistema</h1>
+    <div className="p-4 max-w-full mx-auto space-y-6">
+      <h1 className="text-2xl font-semibold">Histórico de Usuários</h1>
 
-      {/* Filtros */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <InputSelectComponent
-          label="Filial"
-          name="filial"
-          required
-          formulario={form}
-          value={filial}
-          onChange={(e) => setFilial(e.target.value)}
-          options={opcaoFilial}
-          width="w-full"
-        />
+      {/* Campo de busca */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="relative flex-1 max-w-md">
+          <Search
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            size={20}
+          />
+          <input
+            type="text"
+            placeholder="Buscar por usuário, ação, filial ou descrição..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
 
-        <Input
-          label="Nome do Usuario"
-          name="nome"
-          required
-          formulario={form}
-          value={usuario}
-          onChange={(e) => setUsuario(e.target.value)}
-          width="w-full"
-          placeholder="Ex.: João Paulo"
-        />
-
-        <Button
-          className="p-2 w-full h-[38px] mt-7 bg-green-600 cursor-pointer hover:bg-green-700 text-white hover:text-white"
-          type="submit"
-        >
-          <Search size={18} className="inline-block mr-2" />
-          Buscar
-        </Button>
-      </div>
-
-      {/* Botões de exportação */}
-      <div className="flex w-full justify-end mt-4">
+        {/* Botões de exportação */}
         <div className="flex flex-wrap gap-2">
           <button
             className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-blue-100 text-blue-700 hover:bg-blue-200 text-sm"
-            onClick={() => exportToCSV(logsFiltrados)}
+            onClick={() => exportToCSV(filteredAuditorias)}
+            disabled={filteredAuditorias.length === 0}
           >
             <FileText size={16} /> CSV
           </button>
           <button
             className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-green-100 text-green-700 hover:bg-green-200 text-sm"
-            onClick={() => exportToExcel(logsFiltrados)}
+            onClick={() => exportToExcel(filteredAuditorias)}
+            disabled={filteredAuditorias.length === 0}
           >
             <FileSpreadsheet size={16} /> Excel
           </button>
           <button
             className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-red-100 text-red-700 hover:bg-red-200 text-sm"
-            onClick={() => exportToPDF(logsFiltrados)}
+            onClick={() => exportToPDF(filteredAuditorias)}
+            disabled={filteredAuditorias.length === 0}
           >
             <FileDown size={16} /> PDF
           </button>
           <button
             className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm"
-            onClick={() => copyTable(logsFiltrados)}
+            onClick={() => copyTable(filteredAuditorias)}
+            disabled={filteredAuditorias.length === 0}
           >
             <Copy size={16} /> Copiar
           </button>
         </div>
       </div>
 
-      {/* Tabela de logs */}
-      <div className="overflow-x-auto bg-white border rounded-lg shadow-sm mt-4">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                Usuário
-              </th>
+      {/* Legenda de cores */}
+      <div className="bg-gray-50 p-4 rounded-lg">
+        <h3 className="text-sm font-medium text-gray-700 mb-2">
+          Legenda de Ações:
+        </h3>
+        <div className="flex flex-wrap gap-3 text-xs">
+          <div className="flex items-center gap-1">
+            <span className="px-2 py-1 rounded bg-green-100 text-green-700 border border-green-200">
+              Cadastrou/Importou
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="px-2 py-1 rounded bg-blue-100 text-blue-700 border border-blue-200">
+              Editou
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="px-2 py-1 rounded bg-emerald-100 text-emerald-700 border border-emerald-200">
+              Ativou
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="px-2 py-1 rounded bg-red-100 text-red-700 border border-red-200">
+              Inativou
+            </span>
+          </div>
 
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                Ação
-              </th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                Filial
-              </th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                Data
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-100">
-            {logsFiltrados.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="text-center py-6 text-gray-400">
-                  Nenhum log encontrado.
-                </td>
-              </tr>
-            ) : (
-              logsFiltrados.map((log) => (
-                <tr key={log.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-2">{log.usuario}</td>
-                  <td className="px-4 py-2">{log.acao}</td>
-                  <td className="px-4 py-2">{`Filial ${log.filial}`}</td>
-                  <td className="px-4 py-2">{log.data}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+          <div className="flex items-center gap-1">
+            <span className="px-2 py-1 rounded bg-orange-100 text-orange-700 border border-orange-200">
+              Removeu
+            </span>
+          </div>
+        </div>
       </div>
+
+      {/* Informações de resultados */}
+      <div className="text-sm text-gray-600">
+        Mostrando {startIndex + 1} a{" "}
+        {Math.min(endIndex, filteredAuditorias.length)} de{" "}
+        {filteredAuditorias.length} registros
+        {searchTerm && ` (filtrado de ${auditorias.length} total)`}
+        <span className=" ml-3 font-semibold text-red-600">
+          ATENÇÃO: A consulta tem limite de 1000 linhas. Para auditoria
+          completa, solicite ao suporte.
+        </span>
+      </div>
+
+      {/* Tabela de auditoria com scroll horizontal */}
+      <div className="bg-white border rounded-lg shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  Data/Hora
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  Usuário
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  Ação
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  Filial
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[300px]">
+                  Descrição
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-100">
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-8 text-gray-400">
+                    Carregando...
+                  </td>
+                </tr>
+              ) : currentAuditorias.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-8 text-gray-400">
+                    {searchTerm
+                      ? "Nenhum resultado encontrado para sua busca."
+                      : "Nenhuma auditoria encontrada."}
+                  </td>
+                </tr>
+              ) : (
+                currentAuditorias.map((auditoria: any) => (
+                  <tr key={auditoria.id_auditoria} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm whitespace-nowrap">
+                      {auditoria.data_hora
+                        ? new Date(auditoria.data_hora).toLocaleString()
+                        : "N/A"}
+                    </td>
+                    <td className="px-4 py-3 text-sm whitespace-nowrap">
+                      {auditoria.nome_usuario || "N/A"}
+                    </td>
+                    <td className="px-4 py-3 text-sm whitespace-nowrap">
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${getActionStyle(
+                          auditoria.acao
+                        )}`}
+                      >
+                        {auditoria.acao}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm whitespace-nowrap">
+                      {auditoria.nome_filial || "N/A"}
+                    </td>
+                    <td
+                      className="px-4 py-3 text-sm"
+                      title={auditoria.descricao}
+                    >
+                      <div className="max-w-xs truncate">
+                        {auditoria.descricao}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Paginação */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-gray-600">
+            Página {currentPage} de {totalPages}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(currentPage - 1)}
+              className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={16} />
+              Anterior
+            </button>
+
+            <div className="flex items-center gap-1">
+              {[...Array(totalPages)].map((_, index) => {
+                const page = index + 1;
+                const showPage =
+                  page === 1 ||
+                  page === totalPages ||
+                  (page >= currentPage - 2 && page <= currentPage + 2);
+
+                if (!showPage) {
+                  if (page === currentPage - 3 || page === currentPage + 3) {
+                    return (
+                      <span key={page} className="px-2 text-gray-400">
+                        ...
+                      </span>
+                    );
+                  }
+                  return null;
+                }
+
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg ${
+                      currentPage === page
+                        ? "text-blue-600 bg-blue-50 border border-blue-300"
+                        : "text-gray-500 bg-white border border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(currentPage + 1)}
+              className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Próxima
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
