@@ -1,18 +1,17 @@
 const express = require("express");
 const router = express.Router();
 const {
-  iniciarCadastroAluno,
+  cadastrarAlunos,
   consultarAlunos,
   obterEstatisticasAlunos,
   editarAlunos,
   importarAlunos,
   alterarStatusAluno,
+  cadastrarAluno,
 } = require("../controllers/alunoController");
 const authMiddleware = require("../middleware/authMiddleware");
 
-router.post("/iniciar-cadastro-aluno", authMiddleware, iniciarCadastroAluno);
-
-// Routes existentes
+router.get("/cadastrar-alunos", authMiddleware, cadastrarAlunos);
 router.get("/consultar-alunos", authMiddleware, consultarAlunos);
 router.get("/estatisticas/:id_filial", authMiddleware, obterEstatisticasAlunos);
 router.put("/editar-alunos", authMiddleware, editarAlunos);

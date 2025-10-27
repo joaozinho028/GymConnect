@@ -69,7 +69,7 @@ const gerarMatriculaUnica = async (id_empresa, id_filial) => {
   return timestamp;
 };
 
-const cadastrarAluno = async (req, res) => {
+const cadastrarAlunos = async (req, res) => {
   try {
     const {
       nome_aluno,
@@ -897,73 +897,13 @@ const alterarStatusAluno = async (req, res) => {
   }
 };
 
-const iniciarCadastroAluno = async (req, res) => {
-  try {
-    const { nome_aluno, email_aluno, telefone_aluno, cpf_aluno, plano_aluno } =
-      req.body;
-    const dadosAluno = {
-      nome_aluno: nome_aluno?.trim?.() || "",
-      email_aluno: email_aluno?.toLowerCase?.().trim?.() || "",
-      telefone_aluno: telefone_aluno?.trim?.() || "",
-      cpf_aluno: cpf_aluno?.replace?.(/\D/g, "") || "",
-      plano_aluno:
-        typeof plano_aluno === "string"
-          ? plano_aluno.toLowerCase()
-          : plano_aluno?.value?.toLowerCase?.() || "",
-    };
-    const { id_empresa, id_filial } = req.user;
-
-    // Verifica se CPF já existe
-    const { data: alunoCpf } = await supabase
-      .from("alunos")
-      .select("id_aluno")
-      .eq("cpf_aluno", dadosAluno.cpf_aluno)
-      .eq("id_empresa", id_empresa)
-      .single();
-
-    if (alunoCpf) {
-      return res
-        .status(400)
-        .json({ error: "CPF já cadastrado para outro aluno." });
-    }
-
-    // Verifica se e-mail já existe
-    const { data: alunoEmail } = await supabase
-      .from("alunos")
-      .select("id_aluno")
-      .eq("email_aluno", dadosAluno.email_aluno)
-      .eq("id_empresa", id_empresa)
-      .single();
-
-    if (alunoEmail) {
-      return res
-        .status(400)
-        .json({ error: "E-mail já cadastrado para outro aluno." });
-    }
-
-    // ...continua o fluxo normal...
-    // Aqui você pode adicionar lógica extra se necessário
-
-    return res.status(200).json({
-      success: true,
-      message: "Aluno pode ser cadastrado.",
-    });
-  } catch (error) {
-    console.error("Erro ao verificar cadastro de aluno:", error);
-    return res
-      .status(500)
-      .json({ error: "Erro interno ao verificar cadastro de aluno." });
-  }
-};
-
 module.exports = {
-  cadastrarAluno,
+  cadastrarAlunos,
   consultarAlunos,
   gerarMatriculaUnica,
   obterEstatisticasAlunos,
   editarAlunos,
   importarAlunos,
   alterarStatusAluno,
-  iniciarCadastroAluno,
 };
 

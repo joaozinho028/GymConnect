@@ -4,9 +4,9 @@ const auth = require("../middleware/authMiddleware");
 const controller = require("../controllers/fluxoCaixaController");
 
 // Categorias
-router.post("/categorias", auth, controller.cadastrarCategorias);
-router.get("/categorias", auth, controller.listarCategorias);
-router.delete("/categorias/:id", auth, controller.excluirCategoria);
+router.post("/cadastrar-categorias", auth, controller.cadastrarCategorias);
+router.get("/listar-categorias", auth, controller.listarCategorias);
+router.delete("/excluir-categorias/:id", auth, controller.excluirCategoria);
 
 // Transações
 router.get("/", auth, controller.listarTransacoes);

@@ -146,7 +146,7 @@ const CadastrarAluno = ({ ...rest }: any) => {
       },
     });
 
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/alunos/cadastrar`, {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/alunos/cadastrar-alunos`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
