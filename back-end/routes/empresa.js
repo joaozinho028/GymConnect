@@ -6,6 +6,7 @@ const {
   ConsultarFiliais,
   listarPerfis,
   listarFiliais,
+  listarPlanos,
 } = require("../controllers/empresaController");
 const authMiddleware = require("../middleware/authMiddleware");
 
@@ -14,5 +15,6 @@ router.put("/editar-filial", authMiddleware, editarFilial);
 router.get("/consultar-filiais", authMiddleware, ConsultarFiliais);
 router.get("/listar-perfis", authMiddleware, listarPerfis);
 router.get("/listar-filiais", authMiddleware, listarFiliais);
+router.get("/listar-planos", authMiddleware, listarPlanos);
 
 module.exports = router;

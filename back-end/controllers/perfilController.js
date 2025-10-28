@@ -1,9 +1,72 @@
 const supabase = require("../db");
 
+// Função para registrar auditoria de perfis
+const registrarAuditoria = async (
+  id_empresa,
+  id_usuario,
+  id_filial,
+  acao,
+  descricao
+) => {
+  try {
+    const { data, error } = await supabase.from("auditoria").insert([
+      {
+        id_empresa,
+        id_usuario,
+        id_filial,
+        acao,
+        descricao,
+        data_acao: new Date().toISOString(),
+      },
+    ]);
+
+    if (error) {
+      console.error("Erro ao registrar auditoria:", error);
+      return { success: false, error };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    console.error("Erro ao registrar auditoria:", error);
+    return { success: false, error };
+  }
+};
+
+// Função auxiliar para formatar permissões para auditoria
+const formatarPermissoesParaAuditoria = (permissoes) => {
+  if (!permissoes) return "Nenhuma permissão";
+
+  try {
+    const obj =
+      typeof permissoes === "string" ? JSON.parse(permissoes) : permissoes;
+    const modulos = [];
+
+    for (const [key, value] of Object.entries(obj)) {
+      if (
+        key === "configuracoes" &&
+        typeof value === "object" &&
+        value !== null
+      ) {
+        const configs = Object.entries(value)
+          .filter(([, val]) => val)
+          .map(([confKey]) => confKey.replace(/_/g, " "))
+          .join(", ");
+        if (configs) modulos.push(`Configurações: ${configs}`);
+      } else if (value) {
+        modulos.push(key.replace(/_/g, " "));
+      }
+    }
+
+    return modulos.length > 0 ? modulos.join(", ") : "Nenhuma permissão";
+  } catch {
+    return "Permissões inválidas";
+  }
+};
+
 const cadastrarPerfil = async (req, res) => {
   try {
     const { nome_perfil, permissoes_perfil, id_filial } = req.body;
-    const { id_empresa } = req.user;
+    const { id_empresa, id_usuario } = req.user;
 
     if (!nome_perfil || !id_empresa || !permissoes_perfil || !id_filial) {
       console.log("Dados recebidos:", {
@@ -25,6 +88,7 @@ const cadastrarPerfil = async (req, res) => {
       .eq("id_empresa", id_empresa)
       .eq("id_filial", Number(id_filial))
       .maybeSingle();
+
     if (errorBusca) {
       return res.status(500).json({
         message: "Erro ao verificar perfil existente.",
@@ -54,6 +118,20 @@ const cadastrarPerfil = async (req, res) => {
         .status(500)
         .json({ message: "Erro ao cadastrar perfil.", error });
     }
+
+    // Registrar auditoria do cadastro
+    const permissoesFormatadas =
+      formatarPermissoesParaAuditoria(permissoes_perfil);
+    const descricaoAuditoria = `Cadastrou o perfil: ${nome_perfil} (ID: ${data[0].id_perfil}). Permissões: ${permissoesFormatadas}`;
+
+    await registrarAuditoria(
+      id_empresa,
+      id_usuario,
+      id_filial,
+      "Cadastrou perfil",
+      descricaoAuditoria
+    );
+
     return res
       .status(201)
       .json({ message: "Perfil cadastrado com sucesso!", perfil: data[0] });
@@ -67,7 +145,7 @@ const cadastrarPerfil = async (req, res) => {
 const editarPerfil = async (req, res) => {
   try {
     const { id_perfil, nome_perfil, permissoes_perfil, id_filial } = req.body;
-    const { id_empresa } = req.user;
+    const { id_empresa, id_usuario } = req.user;
 
     if (!id_perfil || !nome_perfil || !id_empresa) {
       return res.status(400).json({
@@ -75,22 +153,22 @@ const editarPerfil = async (req, res) => {
       });
     }
 
-    // Verificar se o perfil existe e pertence à empresa
-    const { data: perfilExistente, error: errorBusca } = await supabase
+    // Buscar dados atuais do perfil para auditoria (incluindo nome da filial)
+    const { data: perfilAtual, error: errorBuscaAtual } = await supabase
       .from("perfis")
-      .select("id_perfil")
+      .select(
+        `
+        nome_perfil, 
+        permissoes_perfil, 
+        id_filial,
+        filiais(nome_filial)
+      `
+      )
       .eq("id_perfil", Number(id_perfil))
       .eq("id_empresa", id_empresa)
-      .maybeSingle();
+      .single();
 
-    if (errorBusca) {
-      return res.status(500).json({
-        message: "Erro ao verificar perfil existente.",
-        error: errorBusca,
-      });
-    }
-
-    if (!perfilExistente) {
+    if (errorBuscaAtual || !perfilAtual) {
       return res.status(404).json({
         message: "Perfil não encontrado ou não pertence a esta empresa.",
       });
@@ -116,6 +194,28 @@ const editarPerfil = async (req, res) => {
       return res.status(409).json({
         message: "Já existe outro perfil com esse nome para esta empresa.",
       });
+    }
+
+    // Se houver mudança de filial, buscar o nome da nova filial
+    let novaFilialNome = null;
+    if (id_filial !== undefined && id_filial !== perfilAtual.id_filial) {
+      if (id_filial) {
+        const { data: novaFilial, error: errorNovaFilial } = await supabase
+          .from("filiais")
+          .select("nome_filial")
+          .eq("id_filial", Number(id_filial))
+          .eq("id_empresa", id_empresa)
+          .single();
+
+        if (errorNovaFilial) {
+          return res.status(400).json({
+            message: "Filial não encontrada.",
+            error: errorNovaFilial,
+          });
+        }
+
+        novaFilialNome = novaFilial.nome_filial;
+      }
     }
 
     const updateData = {
@@ -149,6 +249,55 @@ const editarPerfil = async (req, res) => {
       return res.status(404).json({
         message: "Perfil não encontrado.",
       });
+    }
+
+    // Preparar auditoria das alterações
+    const alteracoes = [];
+
+    if (perfilAtual.nome_perfil !== nome_perfil) {
+      alteracoes.push(`Nome: '${perfilAtual.nome_perfil}' → '${nome_perfil}'`);
+    }
+
+    if (
+      permissoes_perfil !== undefined &&
+      JSON.stringify(perfilAtual.permissoes_perfil) !==
+        JSON.stringify(permissoes_perfil)
+    ) {
+      const permissoesAntes = formatarPermissoesParaAuditoria(
+        perfilAtual.permissoes_perfil
+      );
+      const permissoesDepois =
+        formatarPermissoesParaAuditoria(permissoes_perfil);
+      alteracoes.push(
+        `Permissões: '${permissoesAntes}' → '${permissoesDepois}'`
+      );
+    }
+
+    // Correção aqui: usar nomes das filiais em vez de IDs
+    if (
+      id_filial !== undefined &&
+      perfilAtual.id_filial !== (id_filial ? Number(id_filial) : null)
+    ) {
+      const filialAnterior =
+        perfilAtual.filiais?.nome_filial || "Todas as filiais";
+      const filialNova = novaFilialNome || "Todas as filiais";
+
+      alteracoes.push(`Filial: '${filialAnterior}' → '${filialNova}'`);
+    }
+
+    // Registrar auditoria da edição
+    if (alteracoes.length > 0) {
+      const descricaoAuditoria = `Editou o perfil: ${nome_perfil} (ID: ${id_perfil}). Alterações: ${alteracoes.join(
+        ", "
+      )}`;
+
+      await registrarAuditoria(
+        id_empresa,
+        id_usuario,
+        id_filial || perfilAtual.id_filial,
+        "Editou perfil",
+        descricaoAuditoria
+      );
     }
 
     return res.status(200).json({
@@ -250,48 +399,86 @@ const consultarPerfis = async (req, res) => {
 const alterarStatusPerfil = async (req, res) => {
   try {
     const { id_perfil, status_perfil } = req.body;
-    const { id_empresa } = req.user;
+    const { id_empresa, id_usuario } = req.user;
+
     if (!id_perfil || typeof status_perfil !== "boolean" || !id_empresa) {
       return res
         .status(400)
         .json({ message: "Dados obrigatórios não informados." });
     }
+
+    // Buscar dados atuais do perfil para auditoria
+    const { data: perfilAtual, error: errorBusca } = await supabase
+      .from("perfis")
+      .select("nome_perfil, id_filial")
+      .eq("id_perfil", id_perfil)
+      .eq("id_empresa", id_empresa)
+      .single();
+
+    if (errorBusca || !perfilAtual) {
+      return res.status(404).json({ message: "Perfil não encontrado." });
+    }
+
     const { data, error } = await supabase
       .from("perfis")
       .update({ status_perfil })
       .eq("id_perfil", id_perfil)
       .eq("id_empresa", id_empresa)
       .select();
+
     if (error) {
       return res
         .status(500)
         .json({ message: "Erro ao alterar status do perfil.", error });
     }
+
     if (!data || data.length === 0) {
       return res.status(404).json({ message: "Perfil não encontrado." });
     }
 
     // Se inativar o perfil, inativa todos os usuários relacionados
+    let usuariosAfetados = 0;
     if (status_perfil === false) {
-      const { error: errorUsuarios } = await supabase
+      const { data: usuarios, error: errorUsuarios } = await supabase
         .from("usuarios")
         .update({ status_usuario: false })
         .eq("id_perfil", id_perfil)
-        .eq("id_empresa", id_empresa);
+        .eq("id_empresa", id_empresa)
+        .select("id_usuario");
+
       if (errorUsuarios) {
         return res.status(500).json({
           message: "Perfil inativado, mas houve erro ao inativar usuários.",
           error: errorUsuarios,
         });
       }
+
+      usuariosAfetados = usuarios?.length || 0;
     }
+
+    // Registrar auditoria da alteração de status
+    const acao = status_perfil ? "Ativou perfil" : "Inativou perfil";
+    const statusTexto = status_perfil ? "Ativou" : "Inativou";
+    let descricaoAuditoria = `${statusTexto} o perfil: ${perfilAtual.nome_perfil} (ID: ${id_perfil})`;
+
+    if (!status_perfil && usuariosAfetados > 0) {
+      descricaoAuditoria += `. ${usuariosAfetados} usuário(s) também foram inativados`;
+    }
+
+    await registrarAuditoria(
+      id_empresa,
+      id_usuario,
+      perfilAtual.id_filial,
+      acao,
+      descricaoAuditoria
+    );
 
     // Padronizar resposta: id, nome, status, permissoes, filial
     const perfil = data[0];
     return res.status(200).json({
       message:
-        status_perfil === false
-          ? "Status do perfil e dos usuários relacionados atualizado com sucesso."
+        status_perfil === false && usuariosAfetados > 0
+          ? `Status do perfil atualizado com sucesso. ${usuariosAfetados} usuário(s) relacionados também foram inativados.`
           : "Status do perfil atualizado com sucesso.",
       perfil: {
         id: perfil.id_perfil,

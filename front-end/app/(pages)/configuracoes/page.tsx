@@ -12,6 +12,7 @@ import {
   Search,
   Settings2,
   Settings2Icon,
+  Smartphone,
   UserMinus2,
   UserPlus,
   Users,
@@ -21,6 +22,7 @@ import { useEffect, useState } from "react";
 import CadastrarPerfis from "../cadastroPerfil/page";
 import CadastrarUsuarios from "../cadastroUsuario/page";
 import ConfiguracaoPlanos from "../configuracaoPlanos/page";
+import ConfiguracoesApp from "../configuracoesApp/page";
 import CadastrarCategoriaFluxo from "../configuracoesFluxoCaixa/categorias/categorias";
 import ConsultaPerfis from "../consultaPerfis/page";
 import ConsultaUsuarios from "../consultaUsuario/page";
@@ -65,12 +67,12 @@ export default function FormEditaPerfil() {
     //   component: PlanoGymConnect, // comentado temporariamente
     //   permission: "plano_gym_connect",
     // },
-    // {
-    //   name: "Configurações Aplicativo", // comentado temporariamente
-    //   icon: Smartphone,
-    //   component: ConfiguracoesApp,
-    //   permission: "configuracoes_app",
-    // },
+    {
+      name: "Configurações Aplicativo", // comentado temporariamente
+      icon: Smartphone,
+      component: ConfiguracoesApp,
+      permission: "configuracoes_app",
+    },
     {
       name: "Histórico de Usuários",
       icon: UserMinus2,
