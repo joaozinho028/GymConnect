@@ -2,24 +2,23 @@
 
 import Button from "@/components/Forms/Button";
 import Input from "@/components/Forms/Input";
-import InputSelect from "@/components/Forms/InputSelect";
+import InputSelectComponent from "@/components/Forms/InputSelect";
 import { useAuth } from "@/contexts/AuthContext";
 import { GetForm } from "@/utils";
-import { ChevronRight, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import * as yup from "yup";
 
-interface Transacao {
-  id: string;
-  valor: number;
-  data: string;
-  categoria: string;
-  filial: string;
-  tipoPagamento: string;
-  tipo: string;
-  descricao: string;
-}
+type FilialData = {
+  value: number;
+  label: string;
+};
+
+type categoriaData = {
+  value: number;
+  label: string;
+};
+
 const tiposPagamento = [
   { value: "dinheiro", label: "Dinheiro" },
   { value: "cartao", label: "Cartão" },
@@ -31,25 +30,22 @@ const tiposTransacao = [
   { value: "saida", label: "Saída" },
 ];
 
-export default function TransacaoPage() {
+const TransacaoPage = ({ ...rest }: any) => {
   const { token } = useAuth();
   const [valor, setValor] = useState("");
-  const [data, setData] = useState("");
   const [categoria, setCategoria] = useState("");
+
   const [filial, setFilial] = useState("");
   const [tipoPagamento, setTipoPagamento] = useState("");
   const [tipoTransacao, setTipoTransacao] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [categorias, setCategorias] = useState<
-    { value: string; label: string }[]
-  >([]);
-  const [filiais, setFiliais] = useState<{ value: string; label: string }[]>(
-    []
-  );
 
+  const [descricao, setDescricao] = useState("");
+  const [data, setData] = useState("");
+  const [filiais, setFiliais] = useState<FilialData[]>([]);
+
+  const [categorias, setCategorias] = useState<categoriaData[]>([]);
   const [yupSchema, setYupSchema] = useState(yup.object().shape({}));
   const { handleSubmit, setValue, ...form } = GetForm(yupSchema, setYupSchema);
-
   const formWithSetValue = { ...form, setValue };
 
   useEffect(() => {
@@ -64,7 +60,10 @@ export default function TransacaoPage() {
         const data = await res.json();
         setCategorias(
           Array.isArray(data)
-            ? data.map((c: any) => ({ value: String(c.id), label: c.name }))
+            ? data.map((c: any) => ({
+                value: c.id,
+                label: c.nome || c.name,
+              }))
             : []
         );
       } catch {
@@ -87,7 +86,7 @@ export default function TransacaoPage() {
         setFiliais(
           Array.isArray(data)
             ? data.map((f: any) => ({
-                value: String(f.id_filial ?? f.id),
+                value: f.id_filial ?? f.id,
                 label: f.nome_filial ?? f.nome,
               }))
             : []
@@ -98,6 +97,16 @@ export default function TransacaoPage() {
     };
     fetchFiliais();
   }, [token]);
+
+  const resetForm = () => {
+    setValor("");
+    setData("");
+    setCategoria("");
+    setFilial("");
+    setTipoPagamento("");
+    setTipoTransacao("");
+    setDescricao("");
+  };
 
   const onSubmitFunction = async () => {
     try {
@@ -162,115 +171,101 @@ export default function TransacaoPage() {
     return v.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
   };
 
-  const resetForm = () => {
-    setValor("");
-    setData("");
-    setCategoria("");
-    setFilial("");
-    setTipoPagamento("");
-    setTipoTransacao("");
-    setDescricao("");
-  };
-  
   return (
-    <div className="p-4 max-w-7xl mx-auto space-y-8">
-      <div className="w-full bg-white p-6 rounded-lg shadow-md sm:p-10">
-        <div className="flex items-center text-sm text-muted-foreground mb-4">
-          <span className="text-gray-500 hover:text-gray-700 cursor-pointer">
-            Página Inicial
-          </span>
-          <ChevronRight className="mx-2 h-4 w-4" />
-          <span className="font-medium text-primary">
-            Cadastro de Transação
-          </span>
-        </div>
-        <form onSubmit={handleSubmit(onSubmitFunction)} className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Valor"
-              name="valor"
-              required
-              error="Preencha esse campo!"
-              formulario={formWithSetValue}
-              value={valor}
-              onChange={(e) => setValor(aplicarMascaraValor(e.target.value))}
-              placeholder="0,00"
-            />
-            <InputSelect
-              label="Categoria"
-              name="categoria"
-              required
-              error="Selecione uma categoria!"
-              formulario={formWithSetValue}
-              value={categoria}
-              onChange={(e) => setCategoria(e.target.value)}
-              options={categorias}
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <InputSelect
-              label="Filial"
-              name="filial"
-              required
-              error="Selecione uma filial!"
-              formulario={formWithSetValue}
-              value={filial}
-              onChange={(e) => setFilial(e.target.value)}
-              options={filiais}
-            />
-            <InputSelect
-              label="Tipo de Transação"
-              name="tipoTransacao"
-              required
-              error="Selecione o tipo!"
-              formulario={formWithSetValue}
-              value={tipoTransacao}
-              onChange={(e) => setTipoTransacao(e.target.value)}
-              options={tiposTransacao}
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <InputSelect
-              label="Tipo de Pagamento"
-              name="tipoPagamento"
-              required
-              error="Selecione o tipo de pagamento!"
-              formulario={formWithSetValue}
-              value={tipoPagamento}
-              onChange={(e) => setTipoPagamento(e.target.value)}
-              options={tiposPagamento}
-            />
-            <Input
-              label="Descrição"
-              name="descricao"
-              required
-              error="Preencha esse campo!"
-              formulario={formWithSetValue}
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-            />
-            <Input
-              label="Data"
-              name="data"
-              type="date"
-              required
-              error="Preencha esse campo!"
-              formulario={formWithSetValue}
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-            />
-          </div>
-          <div className="flex justify-end pt-4">
-            <Button
-              className="p-2 w-full sm:w-[150px] bg-green-600 cursor-pointer hover:bg-green-700 text-white hover:text-white"
-              // type="submit"
-            >
-              <Save size={18} className="inline-block mr-2" />
-              Salvar
-            </Button>
-          </div>
-        </form>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmitFunction();
+      }}
+      {...rest}
+      className="space-y-4"
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Input
+          label="Valor"
+          name="valor"
+          required
+          error="Preencha esse campo!"
+          formulario={formWithSetValue}
+          value={valor}
+          onChange={(e) => setValor(aplicarMascaraValor(e.target.value))}
+          placeholder="0,00"
+        />
+        <InputSelectComponent
+          label="Categoria"
+          name="categoria"
+          required
+          error="Selecione uma categoria!"
+          formulario={formWithSetValue}
+          value={categoria}
+          onChange={(e) => setCategoria(e.target.value)}
+          options={categorias}
+        />
       </div>
-    </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <InputSelectComponent
+          label="Filial"
+          name="filial"
+          required
+          error="Selecione uma filial!"
+          formulario={formWithSetValue}
+          value={filial}
+          onChange={(e) => setFilial(e.target.value)}
+          options={filiais}
+        />
+        <InputSelectComponent
+          label="Tipo de Transação"
+          name="tipoTransacao"
+          required
+          error="Selecione o tipo!"
+          formulario={formWithSetValue}
+          value={tipoTransacao}
+          onChange={(e) => setTipoTransacao(e.target.value)}
+          options={tiposTransacao}
+        />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <InputSelectComponent
+          label="Tipo de Pagamento"
+          name="tipoPagamento"
+          required
+          error="Selecione o tipo de pagamento!"
+          formulario={formWithSetValue}
+          value={tipoPagamento}
+          onChange={(e) => setTipoPagamento(e.target.value)}
+          options={tiposPagamento}
+        />
+        <Input
+          label="Descrição"
+          name="descricao"
+          required
+          error="Preencha esse campo!"
+          formulario={formWithSetValue}
+          value={descricao}
+          onChange={(e) => setDescricao(e.target.value)}
+        />
+        <Input
+          label="Data"
+          name="data"
+          type="date"
+          required
+          error="Preencha esse campo!"
+          formulario={formWithSetValue}
+          value={data}
+          onChange={(e) => setData(e.target.value)}
+        />
+      </div>
+      <div className="flex justify-end pt-4">
+        <Button
+          className="p-2 w-full sm:w-[150px] bg-green-600 cursor-pointer hover:bg-green-700 text-white hover:text-white"
+          type="submit"
+        >
+          {/* <Save size={18} className="inline-block mr-2" /> */}
+          Salvar
+        </Button>
+      </div>
+    </form>
   );
-}
+};
+
+export default TransacaoPage;
