@@ -1,22 +1,10 @@
 "use client";
-
-import ModalComponent from "@/components/Modal/ModalComponent";
 import { parseISO } from "date-fns";
-import { Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import {
-  Bar,
-  BarChart,
-  Cell,
-  Legend,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import TransacaoPage from "../transacao/TransacaoPage";
+import FluxoGeral from "./fluxoGeral";
+import FluxoPorFilial from "./fluxoPorFilial";
+import FormTransacao from "./formTransacao";
+import { MONTHS } from "./shared";
 
 // Types
 type Transaction = {
@@ -36,38 +24,11 @@ type Category = {
   name: string;
 };
 
-// Constantes
-const MONTHS = [
-  "Janeiro",
-  "Fevereiro",
-  "Março",
-  "Abril",
-  "Maio",
-  "Junho",
-  "Julho",
-  "Agosto",
-  "Setembro",
-  "Outubro",
-  "Novembro",
-  "Dezembro",
-];
-
 // Filiais e matriz
 const filiais = [
   "Academia PowerFit", // Matriz
   "PowerFit São Miguel", // Filial 1
   "PowerFit Alvorada", // Filial 2
-];
-
-const PIE_COLORS = [
-  "#60a5fa",
-  "#34d399",
-  "#f97316",
-  "#f87171",
-  "#a78bfa",
-  "#fb7185",
-  "#fbbf24",
-  "#a3a3a3",
 ];
 
 // Categorias
@@ -575,387 +536,58 @@ export default function FluxoCaixaPage() {
         </nav>
       </div>
 
-      {/* Botões de ação (apenas na aba geral) */}
       {activeTab === "geral" && (
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-          <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:gap-2">
-            {/* <button
-              title="Nova Transação"
-              className="bg-blue-100 w-full sm:w-auto p-2 rounded hover:bg-blue-200 cursor-pointer text-sm"
-              onClick={() => handleOpenTransactionModal()}
-            >
-              Nova Transação
-            </button> */}
-            {/* <button
-              title="Gerar Relatório"
-              className="bg-gray-100 w-full sm:w-auto p-2 rounded hover:bg-gray-200 cursor-pointer flex items-center gap-2 text-sm"
-            >
-              <Copy size={16} /> <span>Gerar Relatório</span>
-            </button> */}
-          </div>
-        </div>
-      )}
-
-      {activeTab === "geral" && (
-        <>
-          {/* Seleção de meses */}
-          <div className="bg-white shadow rounded-lg p-3 sm:p-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-              <div className="flex flex-wrap gap-2 items-center">
-                <label className="text-sm font-medium mr-2">Meses:</label>
-                {MONTHS.map((month) => (
-                  <button
-                    key={month}
-                    onClick={() => toggleMonth(month)}
-                    className={`px-3 py-1 rounded-full text-xs sm:text-sm border ${
-                      selectedMonths.includes(month)
-                        ? "bg-green-500 text-white"
-                        : "bg-gray-100"
-                    }`}
-                  >
-                    {month}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Conteúdo da aba Geral */}
-      {activeTab === "geral" && (
-        <>
-          {/* Cartões resumo - Geral */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-            <div className="bg-green-100 text-green-800 shadow rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-600">
-                Entradas (período)
-              </h3>
-              <div className="mt-2 text-2xl font-bold text-green-700">
-                R$ {totalEntrada.toLocaleString()}
-              </div>
-            </div>
-            <div className="bg-red-100 text-red-800 shadow rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-600">
-                Saídas (período)
-              </h3>
-              <div className="mt-2 text-2xl font-bold text-red-600">
-                R$ {totalSaida.toLocaleString()}
-              </div>
-            </div>
-            <div
-              className={`shadow rounded-lg p-4 ${
-                saldo >= 0 ? "bg-green-50" : "bg-red-50"
-              }`}
-            >
-              <h3 className="text-sm font-medium text-gray-600">
-                Saldo (período)
-              </h3>
-              <div className="mt-2 text-2xl font-bold">
-                {saldo >= 0 ? "+" : "-"} R$ {Math.abs(saldo).toLocaleString()}
-              </div>
-            </div>
-          </div>
-
-          {/* Gráficos - Geral */}
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="bg-white shadow rounded-lg p-3 sm:p-4">
-              <h2 className="font-semibold mb-4">Fluxo de Caixa Geral</h2>
-              <ResponsiveContainer width="100%" height={340}>
-                <BarChart
-                  data={filteredGeneralData}
-                  onClick={(e: any) => {
-                    if (e && e.activeLabel) {
-                      toggleMonth(e.activeLabel as string);
-                    }
-                  }}
-                >
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip
-                    formatter={(value: any) =>
-                      `R$ ${Number(value).toLocaleString()}`
-                    }
-                  />
-                  <Legend />
-                  <Bar dataKey="entrada" name="Entradas" fill="#34d399" />
-                  <Bar dataKey="saida" name="Saídas" fill="#f87171" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="bg-white shadow rounded-lg p-3 sm:p-4">
-              <h2 className="font-semibold mb-4">Gráfico por Categoria</h2>
-              <ResponsiveContainer width="100%" height={340}>
-                <PieChart>
-                  <Tooltip
-                    formatter={(value: any) =>
-                      `R$ ${Number(value).toLocaleString()}`
-                    }
-                  />
-                  <Legend />
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    nameKey="name"
-                    outerRadius={100}
-                    label={({ name, percent }: any) =>
-                      `${name}: ${(percent * 100).toFixed(0)}%`
-                    }
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={PIE_COLORS[index % PIE_COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Conteúdo da aba Filiais */}
-      {activeTab === "filiais" && (
-        <>
-          {/* Controles de visualização das filiais */}
-          <div className="bg-white shadow rounded-lg p-3 sm:p-4">
-            <div className="flex flex-col gap-4">
-              {/* Modo de visualização */}
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-                <label className="text-sm font-medium">
-                  Modo de visualização:
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setFilialViewMode("individual")}
-                    className={`cursor-pointer px-3 py-1 rounded text-sm ${
-                      filialViewMode === "individual"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-100 hover:bg-gray-200"
-                    }`}
-                  >
-                    Individual
-                  </button>
-                  <button
-                    onClick={() => setFilialViewMode("comparativo")}
-                    className={`cursor-pointer px-3 py-1 rounded text-sm ${
-                      filialViewMode === "comparativo"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-100 hover:bg-gray-200"
-                    }`}
-                  >
-                    Comparativo
-                  </button>
-                </div>
-              </div>
-
-              {/* Seleção individual de filial */}
-              {filialViewMode === "individual" && (
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-                  <label className="text-sm font-medium">Filial:</label>
-                  <select
-                    value={selectedFilial}
-                    onChange={(e) => setSelectedFilial(e.target.value)}
-                    className="border rounded px-3 py-2 text-sm min-w-[200px]"
-                  >
-                    {filiais.map((filial) => (
-                      <option key={filial} value={filial}>
-                        {filial}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Seleção múltipla para comparação */}
-              {filialViewMode === "comparativo" && (
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium">
-                      Filiais selecionadas (
-                      {selectedFiliaisForComparison.length}/8):
-                    </label>
-                  </div>
-
-                  {/* Busca de filiais */}
-                  <div className="relative w-full sm:w-1/3">
-                    <input
-                      type="text"
-                      placeholder="Buscar filial..."
-                      value={filialSearch}
-                      onChange={(e) => {
-                        setFilialSearch(e.target.value);
-                        setFilialPage(1);
-                      }}
-                      className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm pl-8"
-                    />
-                    <Search
-                      className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400"
-                      size={16}
-                    />
-                  </div>
-
-                  {/* Lista de filiais com checkbox */}
-                  <div className="border rounded p-3 max-h-60 overflow-y-auto">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                      {paginatedFiliais.map((filial) => (
-                        <label
-                          key={filial}
-                          className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedFiliaisForComparison.includes(
-                              filial
-                            )}
-                            onChange={() => toggleFilialForComparison(filial)}
-                            disabled={
-                              !selectedFiliaisForComparison.includes(filial) &&
-                              selectedFiliaisForComparison.length >= 8
-                            }
-                            className="text-blue-500"
-                          />
-                          <span className="text-sm">{filial}</span>
-                        </label>
-                      ))}
-                    </div>
-
-                    {/* Paginação das filiais */}
-                    {totalFilialPages > 1 && (
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                        <div className="text-xs text-gray-600">
-                          Página {filialPage} de {totalFilialPages} (
-                          {filteredFiliais.length} filiais)
-                        </div>
-                        <div className="flex gap-1">
-                          <button
-                            className="px-2 py-1 text-xs border rounded hover:bg-gray-100"
-                            onClick={() =>
-                              setFilialPage((p) => Math.max(1, p - 1))
-                            }
-                            disabled={filialPage === 1}
-                          >
-                            Anterior
-                          </button>
-                          <button
-                            className="px-2 py-1 text-xs border rounded hover:bg-gray-100"
-                            onClick={() =>
-                              setFilialPage((p) =>
-                                Math.min(totalFilialPages, p + 1)
-                              )
-                            }
-                            disabled={filialPage === totalFilialPages}
-                          >
-                            Próxima
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Card de resumo */}
-          {filialViewMode === "individual" && (
-            <div className="bg-blue-100 text-blue-800 shadow rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-600">
-                Entradas - {selectedFilial} (período)
-              </h3>
-              <div className="mt-2 text-2xl font-bold text-blue-700">
-                R$ {totalEntradaFilialIndividual.toLocaleString()}
-              </div>
-            </div>
-          )}
-
-          {/* Gráfico */}
-          <div className="bg-white shadow rounded-lg p-3 sm:p-4">
-            <h2 className="font-semibold mb-4">
-              {filialViewMode === "individual"
-                ? `Entradas por Mês - ${selectedFilial}`
-                : "Comparativo de Entradas por Filial"}
-            </h2>
-            <ResponsiveContainer width="100%" height={480}>
-              <BarChart
-                data={
-                  filialViewMode === "individual"
-                    ? individualFilialData
-                    : comparativeFilialData
-                }
-                onClick={(e: any) => {
-                  if (e && e.activeLabel) {
-                    toggleMonth(e.activeLabel as string);
-                  }
-                }}
-              >
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip
-                  formatter={(value: any) =>
-                    `R$ ${Number(value).toLocaleString()}`
-                  }
-                />
-                <Legend />
-                {filialViewMode === "individual" ? (
-                  <Bar dataKey="entrada" name="Entradas" fill="#60a5fa" />
-                ) : (
-                  selectedFiliaisForComparison.map((filial, index) => (
-                    <Bar
-                      key={filial}
-                      dataKey={filial}
-                      name={filial}
-                      fill={PIE_COLORS[index % PIE_COLORS.length]}
-                    />
-                  ))
-                )}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </>
+        <FluxoGeral
+          selectedMonths={selectedMonths}
+          transactions={transactions}
+          categories={categories}
+          allCashFlowData={allCashFlowData}
+          pieData={pieData}
+          filteredGeneralData={filteredGeneralData}
+          filteredTransactions={filteredTransactions}
+          totalEntrada={totalEntrada}
+          totalSaida={totalSaida}
+          saldo={saldo}
+          pageItems={pageItems}
+          page={page}
+          totalPages={totalPages}
+          toggleMonth={toggleMonth}
+          exportToCSV={exportToCSV}
+          copyTable={copyTable}
+          setPage={setPage}
+        />
       )}
 
       {activeTab === "filiais" && (
-        <>
-          {/* Seleção de meses */}
-          <div className="bg-white shadow rounded-lg p-3 sm:p-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-              <div className="flex flex-wrap gap-2 items-center">
-                <label className="text-sm font-medium mr-2">Meses:</label>
-                {MONTHS.map((month) => (
-                  <button
-                    key={month}
-                    onClick={() => toggleMonth(month)}
-                    className={`px-3 py-1 rounded-full text-xs sm:text-sm border ${
-                      selectedMonths.includes(month)
-                        ? "bg-green-500 text-white"
-                        : "bg-gray-100"
-                    }`}
-                  >
-                    {month}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </>
+        <FluxoPorFilial
+          filialViewMode={filialViewMode}
+          selectedFilial={selectedFilial}
+          selectedFiliaisForComparison={selectedFiliaisForComparison}
+          individualFilialData={individualFilialData}
+          comparativeFilialData={comparativeFilialData}
+          totalEntradaFilialIndividual={totalEntradaFilialIndividual}
+          filiais={filiais}
+          filialSearch={filialSearch}
+          setFilialSearch={setFilialSearch}
+          filialPage={filialPage}
+          setFilialPage={setFilialPage}
+          paginatedFiliais={paginatedFiliais}
+          totalFilialPages={totalFilialPages}
+          toggleFilialForComparison={toggleFilialForComparison}
+          setFilialViewMode={setFilialViewMode}
+          setSelectedFilial={setSelectedFilial}
+          selectedMonths={selectedMonths}
+          toggleMonth={toggleMonth}
+        />
       )}
 
-      {/* Modal de transação */}
-      {showTransactionModal && (
-        <ModalComponent
-          header={editTransaction ? "Editar Transação" : "Nova Transação"}
-          opened={showTransactionModal}
-          onClose={() => {
-            setShowTransactionModal(false);
-            setActiveTab("geral"); // Volta para a aba geral
-          }}
-        >
-          <TransacaoPage />
-        </ModalComponent>
-      )}
+      <FormTransacao
+        showTransactionModal={showTransactionModal}
+        editTransaction={editTransaction}
+        transactionForm={transactionForm}
+        setShowTransactionModal={setShowTransactionModal}
+        setActiveTab={setActiveTab}
+      />
     </div>
   );
 }
