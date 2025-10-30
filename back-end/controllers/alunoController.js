@@ -1,3 +1,4 @@
+
 const supabase = require("../db");
 const auditoriaService = require("../utils/auditoriaService");
 const { validarCPF, validarEmail, limparCPF } = require("../utils/validadores");
@@ -96,8 +97,8 @@ const cadastrarAlunos = async (req, res) => {
       !email_aluno ||
       !telefone_aluno ||
       !cpf_aluno ||
-      !plano_aluno ||
-      !forma_pagamento
+      !plano_aluno 
+      
     ) {
       return res.status(400).json({
         error: "Todos os campos são obrigatórios",
@@ -178,11 +179,11 @@ const cadastrarAlunos = async (req, res) => {
         ...dadosAluno,
         matricula_aluno,
         forma_pagamento,
-        situacao: "regular",
+        situacao_aluno: "regular",
         status_aluno: true,
         id_empresa,
         id_filial,
-        data_cadastro: new Date().toISOString(),
+        data_cadastro_aluno: new Date().toISOString(),
       })
       .select()
       .single();
@@ -225,10 +226,10 @@ const consultarAlunos = async (req, res) => {
     const { id_empresa } = req.user;
 
     const { data: alunos, error } = await supabase
-      .from("alunos")
-      .select("*")
-      .eq("id_empresa", id_empresa)
-      .order("data_cadastro", { ascending: false });
+  .from("alunos")
+  .select("*")
+  .eq("id_empresa", id_empresa)
+  .order("data_cadastro_aluno", { ascending: false });
 
     if (error) {
       console.error("Erro ao listar alunos:", error);
@@ -253,10 +254,10 @@ const obterEstatisticasAlunos = async (req, res) => {
 
     // Buscar todos os alunos da filial e empresa
     const { data: alunos, error } = await supabase
-      .from("alunos")
-      .select("status_aluno, situacao")
-      .eq("id_empresa", id_empresa)
-      .eq("id_filial", id_filial);
+  .from("alunos")
+  .select("status_aluno, situacao_aluno")
+  .eq("id_empresa", id_empresa)
+  .eq("id_filial", id_filial);
 
     if (error) {
       console.error("Erro ao buscar alunos:", error);
@@ -269,7 +270,7 @@ const obterEstatisticasAlunos = async (req, res) => {
       ativos: alunos.filter((aluno) => aluno.status_aluno === true).length,
       inativos: alunos.filter((aluno) => aluno.status_aluno === false).length,
       inadimplentes: alunos.filter(
-        (aluno) => aluno.situacao === "aguardando pagamento"
+        (aluno) => aluno.situacao_aluno === "aguardando pagamento"
       ).length,
     };
 
@@ -341,6 +342,7 @@ const editarAlunos = async (req, res) => {
         telefone_aluno,
         cpf_aluno: cpfLimpo,
         plano_aluno,
+        situacao_aluno: "regular",
         atualizado_em: new Date().toISOString(),
       })
       .eq("id_aluno", id_aluno)
@@ -897,6 +899,46 @@ const alterarStatusAluno = async (req, res) => {
   }
 };
 
+
+// Controller para validação de CPF e e-mail
+const validarAlunoDados = async (req, res) => {
+  try {
+    const { cpf_aluno, email_aluno } = req.body;
+    const { id_empresa } = req.user;
+
+    let result = {};
+
+    if (cpf_aluno) {
+      const cpfLimpo = cpf_aluno.replace(/\D/g, "");
+      const { data: alunoCpf } = await supabase
+        .from("alunos")
+        .select("id_aluno, nome_aluno")
+        .eq("cpf_aluno", cpfLimpo)
+        .eq("id_empresa", id_empresa)
+        .single();
+      result.cpfExiste = !!alunoCpf;
+      result.cpfAluno = alunoCpf || null;
+    }
+
+    if (email_aluno) {
+      const emailLower = email_aluno.toLowerCase().trim();
+      const { data: alunoEmail } = await supabase
+        .from("alunos")
+        .select("id_aluno, nome_aluno")
+        .eq("email_aluno", emailLower)
+        .eq("id_empresa", id_empresa)
+        .single();
+      result.emailExiste = !!alunoEmail;
+      result.emailAluno = alunoEmail || null;
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Erro ao validar dados do aluno:", error);
+    return res.status(500).json({ error: "Erro interno ao validar dados" });
+  }
+};
+
 module.exports = {
   cadastrarAlunos,
   consultarAlunos,
@@ -905,5 +947,6 @@ module.exports = {
   editarAlunos,
   importarAlunos,
   alterarStatusAluno,
+  validarAlunoDados,
 };
 
