@@ -9,6 +9,7 @@ interface FormTransacaoProps {
   transactionForm: Transaction | null;
   setShowTransactionModal: (v: boolean) => void;
   setActiveTab: (tab: "geral" | "filiais" | "nova") => void;
+  onUpdateTransactions?: () => void | Promise<void>;
 }
 
 const FormTransacao: React.FC<FormTransacaoProps> = ({
@@ -16,6 +17,7 @@ const FormTransacao: React.FC<FormTransacaoProps> = ({
   editTransaction,
   setShowTransactionModal,
   setActiveTab,
+  ...rest
 }) => {
   if (!showTransactionModal) return null;
   return (
@@ -27,7 +29,10 @@ const FormTransacao: React.FC<FormTransacaoProps> = ({
         setActiveTab("geral");
       }}
     >
-      <TransacaoPage />
+      <TransacaoPage {...rest} onSuccess={() => {
+        setShowTransactionModal(false);
+        setActiveTab("geral");
+      }} />
     </ModalComponent>
   );
 };

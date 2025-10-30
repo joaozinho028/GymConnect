@@ -150,15 +150,142 @@ const listarTransacoes = async (req, res) => {
 
 // Criar transação
 const criarTransacao = async (req, res) => {
-  const { id_empresa } = req.user;
-  const transacao = { ...req.body, id_empresa };
-  const { data, error } = await supabase
-    .from("fluxo_caixa")
-    .insert(transacao)
-    .select()
-    .single();
-  if (error) return res.status(500).json({ error: error.message });
-  res.status(201).json(data);
+   
+  try {
+    const { id_empresa } = req.user;
+    const {
+      valor,
+      data,
+      id_categoria,
+      id_filial,
+      tipo_pagamento,
+      tipo,
+      descricao,
+      recorrente,
+      dataInicio,
+      dataFim,
+      todasFiliais
+    } = req.body;
+
+    // LOG dos campos recebidos
+    console.log('Recebido:', {
+      valor,
+      data,
+      id_categoria,
+      id_filial,
+      tipo_pagamento,
+      tipo,
+      descricao,
+      recorrente,
+      dataInicio,
+      dataFim,
+      todasFiliais
+    });
+    console.log('Validação:', {
+      valorValido: valor !== undefined && valor !== null && !isNaN(Number(valor)),
+      dataValida: !recorrente ? !!data : true,
+      dataInicioValida: recorrente ? !!dataInicio : true,
+      dataFimValida: recorrente ? !!dataFim : true,
+      categoriaValida: !!id_categoria,
+      filialValida: todasFiliais ? true : !!id_filial,
+      tipoPagamentoValida: !!tipo_pagamento,
+      tipoValida: !!tipo
+    });
+
+    // Validação dos campos obrigatórios
+    if (
+      valor === undefined ||
+      valor === null ||
+      isNaN(Number(valor)) ||
+      (!recorrente && !data) ||
+      (recorrente && (!dataInicio || !dataFim)) ||
+      !id_categoria ||
+      (!todasFiliais && !id_filial) ||
+      !tipo_pagamento ||
+      !tipo
+    ) {
+      return res.status(400).json({
+        message:
+          "Preencha todos os campos obrigatórios: valor, data (ou data inicial/final se recorrente), categoria, filial (ou todasFiliais), tipo de pagamento e tipo de transação."
+      });
+    }
+
+    // Buscar todas as filiais se necessário
+    let filiaisParaTransacao = [];
+    if (todasFiliais) {
+      const { data: filiaisData, error: filiaisError } = await supabase
+        .from("filiais")
+        .select("id_filial")
+        .eq("id_empresa", id_empresa);
+      if (filiaisError) {
+        return res.status(500).json({ message: "Erro ao buscar filiais", error: filiaisError });
+      }
+      filiaisParaTransacao = filiaisData.map(f => f.id_filial);
+    } else {
+      filiaisParaTransacao = [id_filial];
+    }
+
+    // Se recorrente, gera múltiplas transações mensais para cada filial
+    if (recorrente && dataInicio && dataFim) {
+      const transacoes = [];
+      let current = new Date(dataInicio);
+      const end = new Date(dataFim);
+      const dia = current.getDate();
+      while (current <= end) {
+        const ano = current.getFullYear();
+        const mes = current.getMonth();
+        let dataTransacao = new Date(ano, mes, dia);
+        if (dataTransacao.getMonth() !== mes) {
+          dataTransacao = new Date(ano, mes + 1, 0);
+        }
+        for (const filialId of filiaisParaTransacao) {
+          transacoes.push({
+            id_empresa,
+            valor: Number(valor),
+            data: dataTransacao.toISOString().slice(0, 10),
+            id_categoria: Number(id_categoria),
+            id_filial: Number(filialId),
+            tipo_pagamento,
+            tipo,
+            descricao: descricao || null,
+          });
+        }
+        current.setMonth(current.getMonth() + 1);
+      }
+      const { data: dataRes, error } = await supabase
+        .from("fluxo_caixa")
+        .insert(transacoes)
+        .select();
+      if (error) {
+        return res.status(500).json({ message: "Erro ao cadastrar transações recorrentes", error });
+      }
+      return res.status(201).json({ message: "Transações recorrentes cadastradas", data: dataRes });
+    }
+
+    // Transação única para cada filial
+    const transacoesUnicas = filiaisParaTransacao.map(filialId => ({
+      id_empresa,
+      valor: Number(valor),
+      data,
+      id_categoria: Number(id_categoria),
+      id_filial: Number(filialId),
+      tipo_pagamento,
+      tipo,
+      descricao: descricao || null,
+    }));
+
+    const { data: dataRes, error } = await supabase
+      .from("fluxo_caixa")
+      .insert(transacoesUnicas)
+      .select();
+    if (error) {
+      return res.status(500).json({ message: "Erro ao cadastrar transação", error });
+    }
+    res.status(201).json(dataRes);
+  } catch (err) {
+    console.error("Erro no servidor:", err);
+    res.status(500).json({ message: "Erro no servidor" });
+  }
 };
 
 // Editar transação
