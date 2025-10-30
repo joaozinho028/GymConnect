@@ -22,7 +22,7 @@ const FormTransacao: React.FC<FormTransacaoProps> = ({
   if (!showTransactionModal) return null;
   return (
     <ModalComponent
-      header={editTransaction ? "Editar Transação" : "Nova Transação"}
+      header={editTransaction ? "Editar Lançamento" : "Novo Lançamento"}
       opened={showTransactionModal}
       onClose={() => {
         setShowTransactionModal(false);

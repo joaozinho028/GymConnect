@@ -155,7 +155,7 @@ const TransacaoPage = ({ ...rest }: any) => {
       if (res.ok) {
         Swal.fire({
           icon: "success",
-          text: "Transação cadastrada com sucesso!",
+          text: "Lançamento cadastrada com sucesso!",
           timer: 1500,
           showConfirmButton: false,
           toast: true,
@@ -179,7 +179,7 @@ const TransacaoPage = ({ ...rest }: any) => {
         Swal.fire({
           icon: "error",
           title: "Erro!",
-          text: dataRes?.message || "Erro ao cadastrar transação.",
+          text: dataRes?.message || "Erro ao cadastrar Lançamento.",
           timer: 2500,
           showConfirmButton: false,
           toast: true,
@@ -239,7 +239,7 @@ const TransacaoPage = ({ ...rest }: any) => {
           options={categorias}
         />
       </div>
-      {/* Filial, Tipo de Transação, Tipo de Pagamento - new order, single row */}
+      {/* Filial, Tipo de Lançamento, Tipo de Pagamento - new order, single row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="flex flex-col">
           <InputSelectComponent
@@ -264,11 +264,11 @@ const TransacaoPage = ({ ...rest }: any) => {
               onChange={e => setTodasFiliais(e.target.checked)}
               className="mr-2"
             />
-            <label htmlFor="todasFiliais" className="text-xs text-gray-600">Para todas as academias</label>
+            <label htmlFor="todasFiliais" className="text-xs text-gray-600">Para todas as academias?</label>
           </div>
         </div>
         <InputSelectComponent
-          label="Tipo de Transação"
+          label="Tipo de Lançamento"
           name="tipo"
           required
           error="Selecione o tipo!"
@@ -281,7 +281,7 @@ const TransacaoPage = ({ ...rest }: any) => {
           options={tiposTransacao}
         />
         <InputSelectComponent
-          label="Tipo de Pagamento"
+          label="Forma de Pagamento"
           name="tipo_pagamento"
           required
           error="Selecione o tipo de pagamento!"
@@ -308,7 +308,7 @@ const TransacaoPage = ({ ...rest }: any) => {
             checked={recorrente}
             onChange={(e) => setRecorrente(e.target.checked)}
           />
-          <label htmlFor="recorrente" className="text-sm">Transação recorrente mensal</label>
+        <label htmlFor="recorrente" className="text-sm">É um lançamento recorrente?</label>
         </div>
         {recorrente ? (
           <Input
@@ -355,7 +355,7 @@ const TransacaoPage = ({ ...rest }: any) => {
           rows={3}
           value={descricao}
           onChange={(e) => setDescricao(e.target.value)}
-          placeholder="Descreva a transação..."
+          placeholder="Descreva a Lançamento..."
         />
       </div>
       <div className="flex justify-end pt-4">
