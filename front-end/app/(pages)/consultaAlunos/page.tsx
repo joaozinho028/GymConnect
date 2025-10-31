@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
+import HistoricoAluno from "../historicoAluno/page";
+import ImportarAlunos from "../importarAlunos/page";
 import EditarCadastroAluno from "./FormEditAluno";
 
 function exportToCSV(data: any[], filiais: any[]) {
@@ -266,243 +268,299 @@ export default function ConsultaAlunos() {
     );
   };
 
+  const [activeTab, setActiveTab] = useState<
+    "consulta" | "historico" | "importacao"
+  >("consulta");
+
   return (
     <div className="py-4 max-w-7xl mx-auto space-y-8">
-      <div className="w-full bg-white px-2 py-6 rounded-lg shadow-md sm:px-4 sm:py-10">
-        <div className="flex items-center text-sm text-muted-foreground mb-4">
-          <span className="text-gray-500 hover:text-gray-700 cursor-pointer">
-            Página Inicial
-          </span>
-          <ChevronRight className="mx-2 h-4 w-4" />
-          <span className="font-medium text-primary">Consulta de Alunos</span>
-        </div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
-          <div className="flex w-full sm:w-1/2 items-end">
-            <div className="relative w-full">
-              <input
-                type="text"
-                placeholder="Buscar.."
-                value={busca}
-                onChange={(e) => {
-                  setBusca(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full h-[42px] p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-[#222222] pl-10"
-              />
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                size={20}
-              />
-            </div>
-          </div>
-          <div className="flex w-full sm:w-1/2 justify-end">
-            <div className="flex flex-wrap gap-2">
-              <button
-                className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-blue-100 text-blue-700 hover:bg-blue-200 text-sm"
-                onClick={() => exportToCSV(alunosFiltrados, filiais)}
-                type="button"
-                title="Exportar CSV"
-              >
-                <FileText size={16} /> CSV
-              </button>
-              <button
-                className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-green-100 text-green-700 hover:bg-green-200 text-sm"
-                onClick={() => exportToExcel(alunosFiltrados, filiais)}
-                type="button"
-                title="Exportar Excel"
-              >
-                <FileSpreadsheet size={16} /> Excel
-              </button>
-              <button
-                className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-red-100 text-red-700 hover:bg-red-200 text-sm"
-                onClick={() => exportToPDF(alunosFiltrados, filiais)}
-                type="button"
-                title="Exportar PDF"
-              >
-                <FileDown size={16} /> PDF
-              </button>
-              <button
-                className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm"
-                onClick={() => copyTable(alunosFiltrados, filiais)}
-                type="button"
-                title="Copiar tabela"
-              >
-                <Copy size={16} /> Copiar
-              </button>
-            </div>
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table
-            className="min-w-full divide-y divide-gray-200"
-            style={{ tableLayout: "fixed" }}
-          >
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Ação
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Aluno
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  CPF
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Matrícula
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Data de Cadastro
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Plano
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Filial do Aluno
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Situação
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody
-              className="bg-white divide-y divide-gray-100"
-              style={{ height: "300px" }} // Aproximadamente 5 linhas de 60px
+      <div className="p-2 sm:p-4 max-w-7xl mx-auto space-y-6">
+        {/* Abas */}
+        <div className="border-b border-gray-200">
+          <nav className="flex space-x-8">
+            <button
+              onClick={() => setActiveTab("consulta")}
+              className={`cursor-pointer py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "consulta"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
             >
-              {pageItems.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-6 text-gray-400">
-                    Nenhum aluno encontrado.
-                  </td>
-                </tr>
-              ) : (
-                <>
-                  {pageItems.map((aluno) => (
-                    <tr
-                      key={aluno.id_aluno}
-                      className="hover:bg-gray-50"
-                      style={{ height: "60px" }}
+              Consulta de Alunos
+            </button>
+            <button
+              onClick={() => setActiveTab("historico")}
+              className={` cursor-pointer py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "historico"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Histórico de Alunos
+            </button>
+
+            <button
+              onClick={() => setActiveTab("importacao")}
+              className={` cursor-pointer py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "importacao"
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Importação de Alunos
+            </button>
+          </nav>
+        </div>
+
+        {activeTab === "importacao" && <ImportarAlunos />}
+        {activeTab === "historico" && <HistoricoAluno />}
+        {activeTab === "consulta" && (
+          <>
+            <div className="w-full bg-white px-2 py-6 rounded-lg shadow-md sm:px-4 sm:py-10">
+              <div className="flex items-center text-sm text-muted-foreground mb-4">
+                <span className="text-gray-500 hover:text-gray-700 cursor-pointer">
+                  Página Inicial
+                </span>
+                <ChevronRight className="mx-2 h-4 w-4" />
+                <span className="font-medium text-primary">
+                  Consulta de Alunos
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+                <div className="flex w-full sm:w-1/2 items-end">
+                  <div className="relative w-full">
+                    <input
+                      type="text"
+                      placeholder="Buscar.."
+                      value={busca}
+                      onChange={(e) => {
+                        setBusca(e.target.value);
+                        setPage(1);
+                      }}
+                      className="w-full h-[42px] p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-[#222222] pl-10"
+                    />
+                    <Search
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      size={20}
+                    />
+                  </div>
+                </div>
+                <div className="flex w-full sm:w-1/2 justify-end">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-blue-100 text-blue-700 hover:bg-blue-200 text-sm"
+                      onClick={() => exportToCSV(alunosFiltrados, filiais)}
+                      type="button"
+                      title="Exportar CSV"
                     >
-                      <td className="px-4 py-2 flex gap-2">
-                        <button
-                          title="Editar"
-                          className="p-2 rounded cursor-pointer hover:bg-gray-100 text-green-600"
-                          onClick={() => {
-                            setAlunoSelecionado(aluno);
-                            setModalOpen(true);
-                          }}
-                          type="button"
-                        >
-                          <Pencil size={18} />
-                        </button>
-                      </td>
-                      <td className="px-4 py-2">{aluno.nome_aluno}</td>
-                      <td className="px-4 py-2">{aluno.cpf_aluno}</td>
-                      <td className="px-4 py-2">{aluno.matricula_aluno}</td>
-
-                      <td className="px-4 py-2">
-                        {aluno.data_cadastro
-                          ? new Date(aluno.data_cadastro).toLocaleDateString(
-                              "pt-BR"
-                            )
-                          : "N/A"}
-                      </td>
-                      <td className="px-4 py-2">{aluno.plano_aluno}</td>
-                      <td className="px-4 py-2">
-                        {getNomeFilial(aluno.id_filial)}
-                      </td>
-
-                      <td className="px-4 py-2">
-                        <span
-                          className={
-                            aluno.situacao === "regular"
-                              ? "px-2 py-1 rounded text-xs bg-green-100 text-green-700"
-                              : aluno.situacao === "aguardando pagamento"
-                              ? "px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-700"
-                              : "px-2 py-1 rounded text-xs bg-gray-200 text-gray-700"
-                          }
-                        >
-                          {aluno.situacao === "regular"
-                            ? "Regular"
-                            : aluno.situacao === "aguardando pagamento"
-                            ? "Aguardando Pagamento"
-                            : aluno.situacao || "N/A"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2">
-                        <span
-                          className={
-                            aluno.status_aluno
-                              ? "px-2 py-1 rounded text-xs bg-green-100 text-green-700"
-                              : "px-2 py-1 rounded text-xs bg-red-100 text-red-700"
-                          }
-                        >
-                          {aluno.status_aluno ? "Ativo" : "Inativo"}
-                        </span>
-                      </td>
+                      <FileText size={16} /> CSV
+                    </button>
+                    <button
+                      className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-green-100 text-green-700 hover:bg-green-200 text-sm"
+                      onClick={() => exportToExcel(alunosFiltrados, filiais)}
+                      type="button"
+                      title="Exportar Excel"
+                    >
+                      <FileSpreadsheet size={16} /> Excel
+                    </button>
+                    <button
+                      className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-red-100 text-red-700 hover:bg-red-200 text-sm"
+                      onClick={() => exportToPDF(alunosFiltrados, filiais)}
+                      type="button"
+                      title="Exportar PDF"
+                    >
+                      <FileDown size={16} /> PDF
+                    </button>
+                    <button
+                      className="flex items-center gap-2 px-3 py-2 h-[42px] rounded bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm"
+                      onClick={() => copyTable(alunosFiltrados, filiais)}
+                      type="button"
+                      title="Copiar tabela"
+                    >
+                      <Copy size={16} /> Copiar
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table
+                  className="min-w-full divide-y divide-gray-200"
+                  style={{ tableLayout: "fixed" }}
+                >
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                        Ação
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                        Aluno
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                        CPF
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                        Matrícula
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                        Data de Cadastro
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                        Plano
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                        Filial do Aluno
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                        Situação
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                        Status
+                      </th>
                     </tr>
-                  ))}
-                  {/* Preenche linhas vazias para manter 5 linhas fixas */}
-                  {Array.from({ length: 5 - pageItems.length }).map(
-                    (_, idx) => (
-                      <tr key={`empty-${idx}`} style={{ height: "60px" }}>
-                        <td colSpan={8} />
+                  </thead>
+                  <tbody
+                    className="bg-white divide-y divide-gray-100"
+                    style={{ height: "300px" }} // Aproximadamente 5 linhas de 60px
+                  >
+                    {pageItems.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={8}
+                          className="text-center py-6 text-gray-400"
+                        >
+                          Nenhum aluno encontrado.
+                        </td>
                       </tr>
-                    )
-                  )}
-                </>
-              )}
-            </tbody>
-          </table>
-        </div>{" "}
-        <div className="flex items-center justify-between mt-4">
-          <div className="text-sm text-gray-600">
-            Página {page} de {totalPages}
-          </div>
-          <div className="flex gap-2">
-            <button
-              className="px-3 py-1 border rounded cursor-pointer bg-blue-100 "
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-            >
-              <ChevronRight className="transform rotate-180 h-4 w-4" />
-            </button>
-            <button
-              className="px-3 py-1 border rounded cursor-pointer bg-blue-100 "
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-            >
-              <ChevronLeft className="transform rotate-180 h-4 w-4" />
-            </button>
-          </div>
-        </div>
-        <ModalComponente
-          header="Dados do Aluno"
-          opened={modalOpen}
-          onClose={() => setModalOpen(false)}
-          hasForm={false}
-          hasSaveButton={false}
-          classNameBody="!text-md"
-        >
-          <EditarCadastroAluno
-            alunoSelecionado={alunoSelecionado}
-            onSave={(alunoEditado: any) => {
-              atualizarAlunoNaLista(alunoEditado);
-              setModalOpen(false);
-              Swal.fire({
-                icon: "success",
-                text: "Aluno atualizado com sucesso!",
-                timer: 2000,
-                showConfirmButton: false,
-                toast: true,
-                position: "top-end",
-              });
-            }}
-          />
-        </ModalComponente>{" "}
+                    ) : (
+                      <>
+                        {pageItems.map((aluno) => (
+                          <tr
+                            key={aluno.id_aluno}
+                            className="hover:bg-gray-50"
+                            style={{ height: "60px" }}
+                          >
+                            <td className="px-4 py-2 flex gap-2">
+                              <button
+                                title="Editar"
+                                className="p-2 rounded cursor-pointer hover:bg-gray-100 text-green-600"
+                                onClick={() => {
+                                  setAlunoSelecionado(aluno);
+                                  setModalOpen(true);
+                                }}
+                                type="button"
+                              >
+                                <Pencil size={18} />
+                              </button>
+                            </td>
+                            <td className="px-4 py-2">{aluno.nome_aluno}</td>
+                            <td className="px-4 py-2">{aluno.cpf_aluno}</td>
+                            <td className="px-4 py-2">
+                              {aluno.matricula_aluno}
+                            </td>
+
+                            <td className="px-4 py-2">
+                              {aluno.data_cadastro
+                                ? new Date(
+                                    aluno.data_cadastro
+                                  ).toLocaleDateString("pt-BR")
+                                : "N/A"}
+                            </td>
+                            <td className="px-4 py-2">{aluno.plano_aluno}</td>
+                            <td className="px-4 py-2">
+                              {getNomeFilial(aluno.id_filial)}
+                            </td>
+
+                            <td className="px-4 py-2">
+                              <span
+                                className={
+                                  aluno.situacao === "regular"
+                                    ? "px-2 py-1 rounded text-xs bg-green-100 text-green-700"
+                                    : aluno.situacao === "aguardando pagamento"
+                                    ? "px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-700"
+                                    : "px-2 py-1 rounded text-xs bg-gray-200 text-gray-700"
+                                }
+                              >
+                                {aluno.situacao === "regular"
+                                  ? "Regular"
+                                  : aluno.situacao === "aguardando pagamento"
+                                  ? "Aguardando Pagamento"
+                                  : aluno.situacao || "N/A"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2">
+                              <span
+                                className={
+                                  aluno.status_aluno
+                                    ? "px-2 py-1 rounded text-xs bg-green-100 text-green-700"
+                                    : "px-2 py-1 rounded text-xs bg-red-100 text-red-700"
+                                }
+                              >
+                                {aluno.status_aluno ? "Ativo" : "Inativo"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                        {/* Preenche linhas vazias para manter 5 linhas fixas */}
+                        {Array.from({ length: 5 - pageItems.length }).map(
+                          (_, idx) => (
+                            <tr key={`empty-${idx}`} style={{ height: "60px" }}>
+                              <td colSpan={8} />
+                            </tr>
+                          )
+                        )}
+                      </>
+                    )}
+                  </tbody>
+                </table>
+              </div>{" "}
+              <div className="flex items-center justify-between mt-4">
+                <div className="text-sm text-gray-600">
+                  Página {page} de {totalPages}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    className="px-3 py-1 border rounded cursor-pointer bg-blue-100 "
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    <ChevronRight className="transform rotate-180 h-4 w-4" />
+                  </button>
+                  <button
+                    className="px-3 py-1 border rounded cursor-pointer bg-blue-100 "
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                  >
+                    <ChevronLeft className="transform rotate-180 h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <ModalComponente
+                header="Dados do Aluno"
+                opened={modalOpen}
+                onClose={() => setModalOpen(false)}
+                hasForm={false}
+                hasSaveButton={false}
+                classNameBody="!text-md"
+              >
+                <EditarCadastroAluno
+                  alunoSelecionado={alunoSelecionado}
+                  onSave={(alunoEditado: any) => {
+                    atualizarAlunoNaLista(alunoEditado);
+                    setModalOpen(false);
+                    Swal.fire({
+                      icon: "success",
+                      text: "Aluno atualizado com sucesso!",
+                      timer: 2000,
+                      showConfirmButton: false,
+                      toast: true,
+                      position: "top-end",
+                    });
+                  }}
+                />
+              </ModalComponente>{" "}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

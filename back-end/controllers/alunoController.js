@@ -182,7 +182,7 @@ const cadastrarAlunos = async (req, res) => {
         status_aluno: true,
         id_empresa,
         id_filial,
-        data_cadastro: new Date().toISOString(),
+        data_cadastro_aluno: new Date().toISOString(),
       })
       .select()
       .single();
@@ -228,7 +228,7 @@ const consultarAlunos = async (req, res) => {
       .from("alunos")
       .select("*")
       .eq("id_empresa", id_empresa)
-      .order("data_cadastro", { ascending: false });
+      .order("data_cadastro_aluno", { ascending: false });
 
     if (error) {
       console.error("Erro ao listar alunos:", error);
@@ -717,7 +717,7 @@ const importarAlunos = async (req, res) => {
             status_aluno,
             situacao,
             matricula_aluno: matricula,
-            data_cadastro: new Date().toISOString(),
+            data_cadastro_aluno: new Date().toISOString(),
             id_empresa,
             id_filial,
           })

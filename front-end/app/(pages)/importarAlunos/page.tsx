@@ -515,9 +515,6 @@ const ImportarAlunos = () => {
 
         {/* Título */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Importar Alunos
-          </h1>
           <p className="text-gray-600">
             Importe múltiplos alunos de uma só vez usando um arquivo CSV
           </p>
