@@ -10,7 +10,7 @@ import {
   FileText,
   Search,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ModalComponent } from "../fluxoCaixa/shared";
 // Funções de exportação
 function exportToCSV(data: any[]) {
@@ -122,6 +122,9 @@ function HistoricoAluno() {
     "arquivos"
   );
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
+
   // Buscar alunos da empresa e filiais
   const buscarAlunos = async () => {
     try {
@@ -177,6 +180,14 @@ function HistoricoAluno() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Aqui você pode adicionar a lógica para enviar o arquivo para o servidor
+      console.log("Arquivo selecionado:", file);
+    }
+  };
 
   return (
     <div className="p-4 max-w-full mx-auto space-y-6">
@@ -419,9 +430,23 @@ function HistoricoAluno() {
               <p className="text-gray-600">
                 Aqui você pode importar e visualizar os documentos do aluno.
               </p>
-              <button className="flex items-center gap-2 px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 text-sm shadow">
-                <FileText size={18} /> Importar documento
-              </button>
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  style={{ display: "none" }}
+                  disabled={uploading}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                  disabled={uploading}
+                >
+                  {uploading ? "Enviando..." : "Enviar arquivo"}
+                </button>
+              </div>
             </div>
 
             {/* Mock de documentos */}
