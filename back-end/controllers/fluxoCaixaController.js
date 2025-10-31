@@ -135,9 +135,24 @@ const excluirCategoria = async (req, res) => {
 const listarTransacoes = async (req, res) => {
   const { id_empresa } = req.user;
   const { mes, filial } = req.query;
+  // Busca com join para trazer nome do usuário
   let query = supabase
     .from("fluxo_caixa")
-    .select("*")
+    .select(`
+      id,
+      valor,
+      data,
+      id_categoria,
+      id_filial,
+      tipo_pagamento,
+      tipo,
+      descricao,
+      recorrente,
+      dataInicio,
+      dataFim,
+      id_usuario,
+      usuario:usuarios(nome_usuario)
+    `)
     .eq("id_empresa", id_empresa);
 
   if (mes) query = query.eq("month", mes);
@@ -145,14 +160,30 @@ const listarTransacoes = async (req, res) => {
 
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+
+  // Formatar para o front-end
+  const result = (data || []).map((t) => ({
+    id: t.id,
+    value: t.valor,
+    date: t.data,
+    id_categoria: t.id_categoria,
+    id_filial: t.id_filial,
+    paymentMethod: t.tipo_pagamento,
+    type: t.tipo,
+    description: t.descricao,
+    recorrente: t.recorrente || false,
+    dataInicio: t.dataInicio || "",
+    dataFim: t.dataFim || "",
+    usuario: t.usuario?.nome_usuario || "-"
+  }));
+  res.json(result);
 };
 
 // Criar transação
 const criarTransacao = async (req, res) => {
-   
   try {
-    const { id_empresa } = req.user;
+    console.log('req.user:', req.user); // Log do usuário do token
+    const { id_empresa, id_usuario } = req.user;
     const {
       valor,
       data,
@@ -179,17 +210,8 @@ const criarTransacao = async (req, res) => {
       recorrente,
       dataInicio,
       dataFim,
-      todasFiliais
-    });
-    console.log('Validação:', {
-      valorValido: valor !== undefined && valor !== null && !isNaN(Number(valor)),
-      dataValida: !recorrente ? !!data : true,
-      dataInicioValida: recorrente ? !!dataInicio : true,
-      dataFimValida: recorrente ? !!dataFim : true,
-      categoriaValida: !!id_categoria,
-      filialValida: todasFiliais ? true : !!id_filial,
-      tipoPagamentoValida: !!tipo_pagamento,
-      tipoValida: !!tipo
+      todasFiliais,
+      id_usuario
     });
 
     // Validação dos campos obrigatórios
@@ -241,6 +263,7 @@ const criarTransacao = async (req, res) => {
         for (const filialId of filiaisParaTransacao) {
           transacoes.push({
             id_empresa,
+            id_usuario,
             valor: Number(valor),
             data: dataTransacao.toISOString().slice(0, 10),
             id_categoria: Number(id_categoria),
@@ -248,6 +271,9 @@ const criarTransacao = async (req, res) => {
             tipo_pagamento,
             tipo,
             descricao: descricao || null,
+            recorrente: true,
+            dataInicio,
+            dataFim
           });
         }
         current.setMonth(current.getMonth() + 1);
@@ -257,6 +283,7 @@ const criarTransacao = async (req, res) => {
         .insert(transacoes)
         .select();
       if (error) {
+        console.error("Erro ao cadastrar transações recorrentes:", error);
         return res.status(500).json({ message: "Erro ao cadastrar transações recorrentes", error });
       }
       return res.status(201).json({ message: "Transações recorrentes cadastradas", data: dataRes });
@@ -265,6 +292,7 @@ const criarTransacao = async (req, res) => {
     // Transação única para cada filial
     const transacoesUnicas = filiaisParaTransacao.map(filialId => ({
       id_empresa,
+      id_usuario,
       valor: Number(valor),
       data,
       id_categoria: Number(id_categoria),
@@ -272,6 +300,9 @@ const criarTransacao = async (req, res) => {
       tipo_pagamento,
       tipo,
       descricao: descricao || null,
+      recorrente: false,
+      dataInicio: null,
+      dataFim: null
     }));
 
     const { data: dataRes, error } = await supabase
@@ -279,6 +310,7 @@ const criarTransacao = async (req, res) => {
       .insert(transacoesUnicas)
       .select();
     if (error) {
+      console.error("Erro ao cadastrar transação:", error);
       return res.status(500).json({ message: "Erro ao cadastrar transação", error });
     }
     res.status(201).json(dataRes);
