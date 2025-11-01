@@ -1,5 +1,8 @@
 "use client";
 
+import React from "react";
+import Swal from "sweetalert2";
+import { UploadArquivos } from "@/components/UploadArquivos/UploadArquivos";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   ChevronLeft,
@@ -116,13 +119,11 @@ function HistoricoAluno() {
   const [modalOpen, setModalOpen] = useState(false);
   const [alunoSelecionado, setAlunoSelecionado] = useState<Aluno | null>(null);
   const itemsPerPage = 10;
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<"arquivos" | "mensalidades">(
-    "arquivos"
-  );
+  const [activeTab, setActiveTab] = useState<"arquivos" | "mensalidades">("arquivos");
+  const [arquivos, setArquivos] = useState<any[]>([]);
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
 
   // Buscar alunos da empresa e filiais
@@ -181,13 +182,35 @@ function HistoricoAluno() {
     setCurrentPage(1);
   }, [searchTerm]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Aqui você pode adicionar a lógica para enviar o arquivo para o servidor
-      console.log("Arquivo selecionado:", file);
+  // Buscar arquivos do aluno
+  const buscarArquivosAluno = async (idAluno: string) => {
+    if (!user?.id_empresa || !user?.id_filial || !idAluno) return;
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/upload-arquivo/listar?id_empresa=${user.id_empresa}&id_filial=${user.id_filial}&id_aluno=${idAluno}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setArquivos(data);
+      } else {
+        setArquivos([]);
+      }
+    } catch {
+      setArquivos([]);
     }
   };
+
+  // Atualiza arquivos ao abrir modal do aluno
+  useEffect(() => {
+    if (modalOpen && alunoSelecionado) {
+      buscarArquivosAluno(alunoSelecionado.id_aluno.toString());
+    } else {
+      setArquivos([]);
+    }
+  }, [modalOpen, alunoSelecionado]);
 
   return (
     <div className="p-4 max-w-full mx-auto space-y-6">
@@ -275,94 +298,103 @@ function HistoricoAluno() {
                   </td>
                 </tr>
               ) : (
-                pageItems.map((aluno) => (
-                  <tr
-                    key={aluno.id_aluno}
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => {
-                      setAlunoSelecionado(aluno);
-                      setModalOpen(true);
-                    }}
-                  >
-                    <td className="px-4 py-2">{aluno.nome_aluno}</td>
-                    <td className="px-4 py-2">
-                      {aluno.data_cadastro_aluno
-                        ? new Date(
-                            aluno.data_cadastro_aluno
-                          ).toLocaleDateString("pt-BR")
-                        : "N/A"}
-                    </td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={
-                          aluno.status_aluno
-                            ? "px-2 py-1 rounded text-xs bg-green-100 text-green-700"
-                            : "px-2 py-1 rounded text-xs bg-red-100 text-red-700"
-                        }
-                      >
-                        {aluno.status_aluno ? "Ativo" : "Inativo"}
-                      </span>
-                    </td>
-                  </tr>
-                ))
+                <>
+                  {pageItems.map((aluno) => (
+                    <tr
+                      key={aluno.id_aluno}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => {
+                        setAlunoSelecionado(aluno);
+                        setModalOpen(true);
+                      }}
+                    >
+                      <td className="px-4 py-2">{aluno.nome_aluno}</td>
+                      <td className="px-4 py-2">
+                        {aluno.data_cadastro_aluno
+                          ? new Date(
+                              aluno.data_cadastro_aluno
+                            ).toLocaleDateString("pt-BR")
+                          : "N/A"}
+                      </td>
+                      <td className="px-4 py-2">
+                        <span
+                          className={
+                            aluno.status_aluno
+                              ? "px-2 py-1 rounded text-xs bg-green-100 text-green-700"
+                              : "px-2 py-1 rounded text-xs bg-red-100 text-red-700"
+                          }
+                        >
+                          {aluno.status_aluno ? "Ativo" : "Inativo"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {/* Linhas invisíveis para completar 10 */}
+                  {Array.from({ length: itemsPerPage - pageItems.length }).map((_, idx) => (
+                    <tr key={"empty-" + idx} className="invisible">
+                      <td className="px-4 py-2">-</td>
+                      <td className="px-4 py-2">-</td>
+                      <td className="px-4 py-2">-</td>
+                    </tr>
+                  ))}
+                </>
               )}
             </tbody>
           </table>
         </div>
       </div>
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            Página {currentPage} de {totalPages}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(currentPage - 1)}
-              className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft size={16} />
-              Anterior
-            </button>
-            <div className="flex items-center gap-1">
-              {[...Array(totalPages)].map((_, index) => {
-                const page = index + 1;
-                const showPage =
-                  page === 1 ||
-                  page === totalPages ||
-                  (page >= currentPage - 2 && page <= currentPage + 2);
-                if (!showPage) {
-                  if (page === currentPage - 3 || page === currentPage + 3) {
-                    return <span key={page}>...</span>;
-                  }
-                  return null;
-                }
-                return (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-2 text-sm font-medium rounded-lg ${
-                      currentPage === page
-                        ? "text-blue-600 bg-blue-50 border border-blue-300"
-                        : "text-gray-500 bg-white border border-gray-300 hover:bg-gray-50"
-                    }`}
-                  >
-                    {page}
-                  </button>
-                );
-              })}
-            </div>
-            <button
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(currentPage + 1)}
-              className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Próxima
-              <ChevronRight size={16} />
-            </button>
-          </div>
+      {/* Paginação sempre visível, mesmo se só tem uma página */}
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-gray-600">
+          Página {currentPage} de {totalPages}
         </div>
-      )}
+        <div className="flex items-center gap-2">
+          <button
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(currentPage - 1)}
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft size={16} />
+            Anterior
+          </button>
+          <div className="flex items-center gap-1">
+            {[...Array(totalPages)].map((_, index) => {
+              const page = index + 1;
+              const showPage =
+                page === 1 ||
+                page === totalPages ||
+                (page >= currentPage - 2 && page <= currentPage + 2);
+              if (!showPage) {
+                if (page === currentPage - 3 || page === currentPage + 3) {
+                  return <span key={page}>...</span>;
+                }
+                return null;
+              }
+              return (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-2 text-sm font-medium rounded-lg ${
+                    currentPage === page
+                      ? "text-blue-600 bg-blue-50 border border-blue-300"
+                      : "text-gray-500 bg-white border border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  {page}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(currentPage + 1)}
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Próxima
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
       <ModalComponent
         header={`Dados do Aluno ${alunoSelecionado?.nome_aluno}`}
         opened={modalOpen}
@@ -430,55 +462,97 @@ function HistoricoAluno() {
               <p className="text-gray-600">
                 Aqui você pode importar e visualizar os documentos do aluno.
               </p>
-              <div className="flex items-center gap-2">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  style={{ display: "none" }}
-                  disabled={uploading}
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                  disabled={uploading}
-                >
-                  {uploading ? "Enviando..." : "Enviar arquivo"}
-                </button>
-              </div>
-            </div>
-
-            {/* Mock de documentos */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {[
-                { id: 1, nome: "RG.pdf" },
-                { id: 2, nome: "CPF.pdf" },
-                { id: 3, nome: "ComprovanteResidencia.pdf" },
-              ].map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center gap-3 p-4 bg-white border rounded-lg shadow hover:shadow-md cursor-pointer transition"
-                  onClick={() => alert(`Baixando documento: ${doc.nome}`)}
-                >
-                  <FileText size={32} className="text-green-500" />
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-800">{doc.nome}</div>
-                    <div className="text-xs text-gray-500">
-                      Clique para baixar
-                    </div>
-                  </div>
-                  <button
-                    className="ml-2 px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs hover:bg-blue-200"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      alert(`Baixando documento: ${doc.nome}`);
-                    }}
-                  >
-                    Baixar
-                  </button>
+              {alunoSelecionado && (
+                <div className="flex items-center gap-2">
+                  {/* Componente de upload real */}
+                  <UploadArquivos
+                    idEmpresa={user?.id_empresa?.toString() || ""}
+                    idFilial={user?.id_filial?.toString() || ""}
+                    idAluno={alunoSelecionado.id_aluno.toString()}
+                    onUpload={() => buscarArquivosAluno(alunoSelecionado.id_aluno.toString())}
+                  />
                 </div>
-              ))}
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {arquivos.length === 0 ? (
+                <div className="col-span-3 text-gray-400 text-center py-6">Nenhum documento enviado.</div>
+              ) : (
+                arquivos.map((doc, idx) => (
+                  <div
+                    key={doc.nome + idx}
+                    className="flex items-center gap-3 p-4 bg-white border rounded-lg shadow hover:shadow-md transition"
+                  >
+                    <FileText size={32} className="text-green-500" />
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-800">{doc.nome}</div>
+                      <div className="text-xs text-gray-500">Clique para baixar</div>
+                    </div>
+                    <button
+                      className="ml-2 px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs hover:bg-blue-200"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(doc.url);
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = doc.nome;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          window.URL.revokeObjectURL(url);
+                        } catch (err) {
+                          Swal.fire({ icon: 'error', title: 'Erro ao baixar arquivo.' });
+                        }
+                      }}
+                    >
+                      Baixar
+                    </button>
+                    <button
+                      className="ml-2 px-2 py-1 rounded bg-red-100 text-red-700 text-xs hover:bg-red-200"
+                      onClick={async () => {
+                        const confirm = await Swal.fire({
+                          title: 'Excluir arquivo?',
+                          text: `Deseja realmente excluir "${doc.nome}"?`,
+                          icon: 'warning',
+                          showCancelButton: true,
+                          confirmButtonText: 'Sim, excluir',
+                          cancelButtonText: 'Cancelar',
+                        });
+                        if (confirm.isConfirmed) {
+                          try {
+                            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/upload-arquivo/excluir`, {
+                              method: 'DELETE',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({
+                                nome: doc.nome,
+                                id_empresa: user?.id_empresa,
+                                id_filial: user?.id_filial,
+                                id_aluno: alunoSelecionado?.id_aluno,
+                              }),
+                            });
+                            const result = await response.json();
+                            if (response.ok && !result.error) {
+                              Swal.fire({ icon: 'success', title: 'Arquivo excluído!' });
+                              if (alunoSelecionado) buscarArquivosAluno(alunoSelecionado.id_aluno.toString());
+                            } else {
+                              Swal.fire({ icon: 'error', title: 'Erro ao excluir', text: result.error || 'Falha ao excluir arquivo.' });
+                            }
+                          } catch (err) {
+                            Swal.fire({ icon: 'error', title: 'Erro ao excluir arquivo.' });
+                          }
+                        }
+                      }}
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}

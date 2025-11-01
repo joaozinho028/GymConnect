@@ -27,7 +27,6 @@ app.use("/auditoria", auditoriaRoutes);
 app.use("/precificacao", precificacaoRoutes);
 app.use("/dadosBancarios", dadosBancariosRoutes);
 app.use("/fluxo-caixa", fluxoCaixaRoutes);
-
 app.use("/upload-arquivo", uploadArquivoRoutes);
 
 app.get("/", (req, res) => {
