@@ -38,7 +38,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Redirecionar conforme estado
   useEffect(() => {
-    if (!isAuthenticated && pathname !== "/login") {
+    // Permitir acesso livre à /login e /criarConta
+    const publicRoutes = ["/login", "/criarConta"];
+    if (!isAuthenticated && !publicRoutes.includes(pathname)) {
       router.push("/login");
     }
     if (isAuthenticated && pathname === "/login") {

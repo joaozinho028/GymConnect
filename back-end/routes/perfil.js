@@ -7,8 +7,10 @@ const {
   consultarPerfis,
   alterarStatusPerfil,
   listarPermissoes,
+  criarPerfilAdministrador,
 } = require("../controllers/perfilController");
-
+// Cadastro inicial: criar perfil administrador sem autenticação
+router.post("/criar-administrador", criarPerfilAdministrador);
 router.post("/cadastrar-perfil", authMiddleware, cadastrarPerfil);
 router.put("/editar-perfil", authMiddleware, editarPerfil);
 router.get("/consultar-perfis", authMiddleware, consultarPerfis);

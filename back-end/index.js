@@ -3,9 +3,9 @@ const express = require("express");
 const cors = require("cors");
 
 const authRoutes = require("./routes/auth");
-const usuarioRoutes = require("./routes/usuario");
+const usuarioRoutes = require("./routes/usuarios");
 const perfilRoutes = require("./routes/perfil");
-const empresaRoutes = require("./routes/empresa");
+const empresaRoutes = require("./routes/empresas");
 const alunoRoutes = require("./routes/alunos");
 const auditoriaRoutes = require("./routes/auditoria");
 const precificacaoRoutes = require("./routes/precificacao");

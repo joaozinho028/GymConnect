@@ -6,7 +6,10 @@ const {
   editarUsuario,
   listarUsuarios,
   alterarStatusUsuario,
+  cadastrarUsuarioPublico,
 } = require("../controllers/usuarioController");
+// Cadastro inicial: criar usuário sem autenticação
+router.post("/cadastrar-usuario-publico", cadastrarUsuarioPublico);
 
 router.post("/cadastrar-usuario", authMiddleware, cadastrarUsuario);
 router.put("/editar-usuario", authMiddleware, editarUsuario);

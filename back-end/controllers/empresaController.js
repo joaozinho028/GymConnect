@@ -1,5 +1,67 @@
 const supabase = require("../db");
 
+const criarEmpresa = async (req, res) => {
+  try {
+    const { nome_empresa, cnpj_empresa, plano_saas } = req.body;
+    if (!nome_empresa || !cnpj_empresa || !plano_saas) {
+      return res.status(400).json({ message: "Todos os campos são obrigatórios." });
+    }
+    // Verifica se já existe empresa com o mesmo CNPJ
+    const { data: empresaExistente, error: errorBusca } = await supabase
+      .from("empresas")
+      .select("id_empresa")
+      .eq("cnpj_empresa", cnpj_empresa)
+      .maybeSingle();
+    if (errorBusca) {
+      console.error("[criarEmpresa] Erro ao buscar empresa existente:", errorBusca);
+      return res.status(500).json({ message: "Erro ao buscar empresa existente.", error: errorBusca });
+    }
+    if (empresaExistente) {
+      return res.status(400).json({ message: "CNPJ já cadastrado." });
+    }
+    // Insere empresa
+    const { data: empresa, error } = await supabase
+      .from("empresas")
+      .insert({
+        nome_empresa,
+        cnpj_empresa,
+        plano_saas,
+        status_empresa: true,
+        criado_em: new Date().toISOString(),
+      })
+      .select()
+      .single();
+    if (error) {
+      console.error("[criarEmpresa] Erro ao inserir empresa:", error);
+      return res.status(500).json({ message: "Erro ao cadastrar empresa.", error });
+    }
+
+    // Cadastrar filial matriz automaticamente
+    const filialPayload = {
+      id_empresa: empresa.id_empresa,
+      nome_filial: empresa.nome_empresa,
+      cnpj_filial: empresa.cnpj_empresa,
+      tipo_filial: "matriz",
+      status_filial: true,
+      criado_em: new Date().toISOString(),
+    };
+    const { data: filial, error: errorFilial } = await supabase
+      .from("filiais")
+      .insert(filialPayload)
+      .select()
+      .single();
+    if (errorFilial) {
+      console.error("[criarEmpresa] Erro ao cadastrar filial matriz:", errorFilial);
+      // Não retorna erro, mas inclui info no response
+      return res.status(201).json({ message: "Empresa cadastrada, mas houve erro ao cadastrar filial matriz.", empresa, errorFilial });
+    }
+    res.status(201).json({ message: "Empresa e filial matriz cadastradas com sucesso.", empresa, filial });
+  } catch (err) {
+    console.error("[criarEmpresa] Erro inesperado:", err);
+    res.status(500).json({ message: "Erro no servidor.", error: err });
+  }
+};
+
 const cadastrarFilial = async (req, res) => {
   try {
     const id_empresa = req.user.id_empresa;
@@ -317,4 +379,5 @@ module.exports = {
   listarPerfis,
   listarFiliais,
   listarPlanos,
+  criarEmpresa,
 };

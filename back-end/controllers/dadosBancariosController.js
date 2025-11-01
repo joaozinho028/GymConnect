@@ -108,7 +108,6 @@ const salvarDadosBancarios = async (req, res) => {
       resultado = data[0];
     }
 
-    console.log("Dados bancários salvos:", resultado);
 
     res.json({
       message: "Dados bancários salvos com sucesso!",
@@ -279,7 +278,6 @@ const salvarConfiguracoesTrasferencia = async (req, res) => {
     }
     */
 
-    console.log("Configurações de transferência salvas:", resultado);
 
     res.json({
       message: "Configurações de transferência salvas com sucesso!",

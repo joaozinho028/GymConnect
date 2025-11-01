@@ -1,3 +1,4 @@
+
 const db = require("../db");
 const bcrypt = require("bcryptjs");
 const auditoriaService = require("../utils/auditoriaService");
@@ -78,8 +79,6 @@ const cadastrarUsuario = async (req, res) => {
       });
     }
 
-    // Registrar auditoria
-    console.log("🔍 Tentando registrar auditoria para cadastro de usuário...");
     const auditoriaResult = await registrarAuditoria(
       id_empresa,
       req.user.id_usuario, // Usuário que fez o cadastro
@@ -87,7 +86,6 @@ const cadastrarUsuario = async (req, res) => {
       "Cadastrou usuário",
       `Cadastrou o usuário: ${nome_usuario} (${email_usuario})`
     );
-    console.log("📝 Resultado da auditoria:", auditoriaResult);
 
     res.status(201).json({
       message: "Usuário cadastrado com sucesso!",
@@ -344,9 +342,69 @@ const editarUsuario = async (req, res) => {
   }
 };
 
+// Cadastro público de usuário (sem autenticação)
+const cadastrarUsuarioPublico = async (req, res) => {
+  const { nome_usuario, email_usuario, senha_usuario, id_empresa, id_perfil } = req.body;
+  try {
+    // Buscar filial matriz pelo id_empresa
+    const { data: filial, error: errorFilial } = await supabase
+      .from("filiais")
+      .select("id_filial")
+      .eq("id_empresa", id_empresa)
+      .eq("tipo_filial", "matriz")
+      .maybeSingle();
+    if (errorFilial || !filial) {
+      console.error('Erro ao buscar filial matriz:', errorFilial);
+      return res.status(500).json({ message: "Erro ao buscar filial matriz.", error: errorFilial });
+    }
+    const id_filial = filial.id_filial;
+
+    // Verifica se já existe usuário com o mesmo email
+    const { data: userExists, error: errorBusca } = await supabase
+      .from("usuarios")
+      .select("id_usuario")
+      .eq("email_usuario", email_usuario)
+      .maybeSingle();
+    if (errorBusca) {
+      console.error('Erro ao buscar usuário existente:', errorBusca);
+      return res.status(500).json({ message: "Erro ao buscar usuário existente.", error: errorBusca });
+    }
+    if (userExists) {
+      return res.status(400).json({ message: "Usuário já cadastrado" });
+    }
+    // Criptografa a senha
+    const bcrypt = require("bcryptjs");
+    const hash = await bcrypt.hash(senha_usuario, 10);
+    // Insere usuário
+    const { data, error } = await supabase
+      .from("usuarios")
+      .insert([
+        {
+          nome_usuario,
+          email_usuario,
+          senha_usuario: hash,
+          id_empresa,
+          id_filial,
+          id_perfil,
+          status_usuario: true,
+        },
+      ])
+      .select();
+    if (error) {
+      console.error('Erro ao inserir usuário:', error);
+      return res.status(500).json({ message: error.message || "Erro ao cadastrar usuário.", error });
+    }
+    res.status(201).json({ message: "Usuário cadastrado com sucesso!", user: data && data[0] ? data[0] : null });
+  } catch (err) {
+    console.error('[cadastrarUsuarioPublico] Erro inesperado:', err);
+    res.status(500).json({ message: err?.message || "Erro no servidor.", error: err });
+  }
+};
+
 module.exports = {
   cadastrarUsuario,
   editarUsuario,
   listarUsuarios,
   alterarStatusUsuario,
+  cadastrarUsuarioPublico,
 };
