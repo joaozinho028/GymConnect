@@ -949,4 +949,3 @@ module.exports = {
   alterarStatusAluno,
   validarAlunoDados,
 };
-

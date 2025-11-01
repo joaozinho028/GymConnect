@@ -6,7 +6,6 @@ const auditoriaController = {
    */
   getAll: async (req, res) => {
     try {
-      console.log("Usuário logado:", req.user);
 
       const { id_empresa } = req.user;
 
@@ -92,7 +91,6 @@ const auditoriaController = {
         });
       }
 
-      console.log("Número de registros encontrados:", formattedData.length);
 
       res.status(200).json(formattedData);
     } catch (error) {

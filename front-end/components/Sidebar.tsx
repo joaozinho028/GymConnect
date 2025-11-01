@@ -6,7 +6,6 @@ import {
   BarChart2,
   Building2,
   ChevronDown,
-  DownloadCloud,
   GraduationCap,
   LayoutDashboard,
   LogOut,
@@ -146,15 +145,6 @@ const Sidebar: FC<SidebarProps> = ({ open, onClose }) => {
                   )}`}
                 >
                   <Search size={14} /> Consulta de Alunos
-                </Link>
-                <Link
-                  href="/importarAlunos"
-                  onClick={onClose}
-                  className={`flex items-center gap-2 px-2 py-1 rounded ${isActive(
-                    "/importarAlunos"
-                  )}`}
-                >
-                  <DownloadCloud size={14} /> Importar Alunos
                 </Link>
               </div>
             )}

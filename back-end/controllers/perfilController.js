@@ -1,3 +1,5 @@
+// POST /perfis - cadastra perfil administrador vinculado à empresa
+
 const supabase = require("../db");
 
 // Função para registrar auditoria de perfis
@@ -68,17 +70,11 @@ const cadastrarPerfil = async (req, res) => {
     const { nome_perfil, permissoes_perfil, id_filial } = req.body;
     const { id_empresa, id_usuario } = req.user;
 
-    if (!nome_perfil || !id_empresa || !permissoes_perfil || !id_filial) {
-      console.log("Dados recebidos:", {
-        nome_perfil,
-        permissoes_perfil,
-        id_filial,
-        id_empresa,
-      });
-      return res
-        .status(400)
-        .json({ message: "Campos obrigatórios não informados ou inválidos." });
-    }
+      if (!nome_perfil || !id_empresa || !permissoes_perfil || !id_filial) {
+        return res
+          .status(400)
+          .json({ message: "Campos obrigatórios não informados ou inválidos." });
+      }
 
     // Verificar se já existe perfil com o mesmo nome para a empresa
     const { data: perfilExistente, error: errorBusca } = await supabase
@@ -548,10 +544,89 @@ const listarPermissoes = async (req, res) => {
   }
 };
 
+const criarPerfilAdministrador = async (req, res) => {
+  try {
+    const { id_empresa } = req.body;
+    if (!id_empresa) {
+      return res.status(400).json({ message: "ID da empresa é obrigatório." });
+    }
+    // Buscar filial matriz pelo id_empresa
+    const { data: filial, error: errorFilial } = await supabase
+      .from("filiais")
+      .select("id_filial")
+      .eq("id_empresa", id_empresa)
+      .eq("tipo_filial", "matriz")
+      .maybeSingle();
+    if (errorFilial || !filial) {
+      console.error("[criarPerfilAdministrador] Erro ao buscar filial matriz:", errorFilial);
+      return res.status(500).json({ message: "Erro ao buscar filial matriz.", error: errorFilial });
+    }
+    const id_filial = filial.id_filial;
+
+    // Verifica se já existe perfil administrador para a empresa e filial matriz
+    const { data: perfilExistente, error: errorBusca } = await supabase
+      .from("perfis")
+      .select("id_perfil")
+      .eq("nome_perfil", "administrador")
+      .eq("id_empresa", id_empresa)
+      .eq("id_filial", id_filial)
+      .maybeSingle();
+    if (errorBusca) {
+      console.error("[criarPerfilAdministrador] Erro ao buscar perfil existente:", errorBusca);
+      return res.status(500).json({ message: "Erro ao buscar perfil existente.", error: errorBusca });
+    }
+    if (perfilExistente) {
+      return res.status(200).json({ message: "Perfil administrador já existe.", perfil: perfilExistente });
+    }
+    // Permissões padrão para perfil administrador
+    const permissoesPadrao = {
+      alunos: true,
+      filiais: true,
+      fluxo_caixa: true,
+      configuracoes: {
+        informacoes_bancarias: true,
+        plano_gym_connect: true,
+        configuracoes_app: true,
+        historico_usuario: true,
+        usuarios: true,
+        perfis: true,
+      },
+      precificacao: {
+        planos: true,
+      },
+      ajuste_fluxo_caixa: {
+        categorias: true,
+      },
+    };
+    // Insere perfil administrador
+    const { data, error } = await supabase
+      .from("perfis")
+      .insert({
+        id_empresa,
+        id_filial,
+        nome_perfil: "administrador",
+        permissoes_perfil: permissoesPadrao,
+        status_perfil: true,
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+    if (error) {
+      console.error("[criarPerfilAdministrador] Erro ao inserir perfil administrador:", error);
+      return res.status(500).json({ message: "Erro ao cadastrar perfil.", error });
+    }
+    res.status(201).json({ message: "Perfil administrador criado com sucesso.", perfil: data });
+  } catch (err) {
+    console.error("[criarPerfilAdministrador] Erro inesperado:", err);
+    res.status(500).json({ message: "Erro no servidor.", error: err });
+  }
+};
+
 module.exports = {
   cadastrarPerfil,
   editarPerfil,
   consultarPerfis,
   alterarStatusPerfil,
   listarPermissoes,
+  criarPerfilAdministrador,
 };
