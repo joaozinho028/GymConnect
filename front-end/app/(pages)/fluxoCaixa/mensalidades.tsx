@@ -75,8 +75,7 @@ const Mensalidades = () => {
    
     {dadosMock.map((filial) => (
       <div key={filial.id_filial} className="bg-white border rounded-lg shadow-sm p-3 mb-6">
-        <h2 className="text-base font-semibold text-blue-700 mb-2 flex items-center gap-2">
-          <span className="text-sm">🏢</span>
+        <h2 className="text-base font-semibold text-green-700 mb-2 flex items-center gap-2">
           <span className="text-sm">{filial.nome_filial}</span>
         </h2>
         {filial.alunos.map((aluno) => (

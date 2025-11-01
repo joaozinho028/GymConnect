@@ -33,6 +33,7 @@ export type Category = {
 
 interface FluxoGeralProps {
   selectedMonths: string[];
+  selectedYear: string;
   transactions: Transaction[];
   categories: Category[];
   allCashFlowData: { month: string; entrada: number; saida: number }[];
@@ -46,27 +47,50 @@ interface FluxoGeralProps {
   page: number;
   totalPages: number;
   toggleMonth: (month: string) => void;
+  setSelectedYear: (year: string) => void;
   exportToCSV: (data: Transaction[]) => void;
   copyTable: (data: Transaction[]) => void;
   setPage: (page: number) => void;
 }
 
+// Função utilitária para extrair anos disponíveis dos dados
+const getAvailableYears = (): string[] => {
+  const currentYear = new Date().getFullYear();
+  const years: string[] = [];
+  for (let y = 2000; y <= currentYear + 1; y++) {
+    years.push(y.toString());
+  }
+  return years;
+};
+
 const FluxoGeral: React.FC<FluxoGeralProps> = ({
   selectedMonths,
+  selectedYear,
   filteredGeneralData,
   totalEntrada,
   totalSaida,
   saldo,
   pieData,
   toggleMonth,
+  setSelectedYear,
 }) => {
   return (
     <>
-      {/* Seleção de meses */}
+      {/* Seleção de ano e meses */}
       <div className="bg-white shadow rounded-lg p-3 sm:p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
           <div className="flex flex-wrap gap-2 items-center">
-            <label className="text-sm font-medium mr-2">Meses:</label>
+            <label className="text-sm font-medium mr-2">Ano:</label>
+            <select
+              className="border rounded px-2 py-1 text-sm"
+              value={selectedYear}
+              onChange={e => setSelectedYear(e.target.value)}
+            >
+              {getAvailableYears().map((year) => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+            <label className="text-sm font-medium ml-4 mr-2">Meses:</label>
             {MONTHS.map((month: string) => (
               <button
                 key={month}
