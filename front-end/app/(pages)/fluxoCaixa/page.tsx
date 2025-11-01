@@ -944,7 +944,7 @@ export default function FluxoCaixaPage() {
                 : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}
           >
-            Nova Transação
+            Novo Lançamento
           </button>
         </nav>
       </div>
@@ -1000,6 +1000,57 @@ export default function FluxoCaixaPage() {
         transactionForm={transactionForm}
         setShowTransactionModal={setShowTransactionModal}
         setActiveTab={setActiveTab}
+        onUpdateTransactions={async () => {
+          // Refaz a busca das transações após cadastro
+          try {
+            const resTrans = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL}/fluxo-caixa/listar-transacoes`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            const transData = resTrans.ok ? await resTrans.json() : [];
+            const resCat = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL}/fluxo-caixa/listar-categorias`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            const catData = resCat.ok ? await resCat.json() : [];
+            // Mapeia id_categoria para nome
+            const catMap = Object.fromEntries(
+              catData.map((c: any) => [c.id, c.name])
+            );
+            // Buscar filiais do backend
+            const resFiliais = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL}/empresas/listar-filiais`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            const filiaisData = resFiliais.ok ? await resFiliais.json() : [];
+            const filialMap = Object.fromEntries(
+              filiaisData.map((f: any) => [
+                f.id_filial || f.id,
+                f.nome_filial || f.nome,
+              ])
+            );
+            setFiliais([
+              "Academia PowerFit",
+              ...filiaisData.map((f: any) => f.nome_filial || f.nome),
+            ]);
+            const transactions = transData.map((t: any) => ({
+              id: t.id,
+              date: t.data,
+              description: t.descricao,
+              category: catMap[t.id_categoria] || "",
+              paymentMethod: t.tipo_pagamento,
+              type: t.tipo,
+              value: t.valor,
+              month: MONTHS[new Date(t.data).getMonth()],
+              filial: t.id_filial ? filialMap[t.id_filial] : "Academia PowerFit",
+            }));
+            setTransactions(transactions);
+            setCategories(catData);
+          } catch {
+            setTransactions([]);
+            setCategories([]);
+          }
+        }}
       />
     </div>
   );
