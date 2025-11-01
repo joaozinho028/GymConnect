@@ -8,6 +8,7 @@ import FormTransacao from "./formTransacao";
 import { MONTHS } from "./shared";
 import { Plus } from "lucide-react";
 import LancamentosGerais from "./lancamentosGerais";
+import Mensalidades from "./mensalidades";
 
 // Types
 type Transaction = {
@@ -537,6 +538,11 @@ export default function FluxoCaixaPage() {
           selectedMonths={selectedMonths}
           toggleMonth={toggleMonth}
         />
+      )}
+
+      {activeTab === "mensalidades" && (
+        <Mensalidades>
+        </Mensalidades>
       )}
 
 
